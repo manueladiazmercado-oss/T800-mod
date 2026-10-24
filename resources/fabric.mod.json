@@ -1,0 +1,17 @@
+{
+  "schemaVersion": 1,
+  "id": "t800hud",
+  "version": "${version}",
+  "name": "T-800 HUD",
+  "description": "Client-side Terminator style HUD: target tracking reticle, target analysis and system info.",
+  "authors": ["you"],
+  "license": "MIT",
+  "environment": "client",
+  "entrypoints": { "client": ["dev.t800.hud.T800HudClient"] },
+  "depends": {
+    "fabricloader": ">=0.18.1",
+    "minecraft": "~1.21.11",
+    "java": ">=21",
+    "fabric-api": "*"
+  }
+}
