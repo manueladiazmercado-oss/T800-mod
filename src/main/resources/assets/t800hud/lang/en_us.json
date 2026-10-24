@@ -1,0 +1,6 @@
+{
+  "key.category.t800hud.main": "T-800 HUD",
+  "key.t800hud.toggle": "Toggle HUD",
+  "key.t800hud.mode": "Cycle target mode (ALL / PLAYERS / HOSTILE)",
+  "key.t800hud.vision": "Terminator vision (red scanlines)"
+}
