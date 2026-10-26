@@ -26,6 +26,7 @@ public class T800HudClient implements ClientModInitializer {
     private static KeyMapping toggleKey, modeKey, visionKey, nightKey, armorKey, settingsKey,
             analyticsKey, gigaMapKey, terminationKey, performanceKey;
     private static boolean nvApplied;
+    private static boolean deathRecorded;
 
     private static boolean hideVanillaBars() {
         Minecraft mc = Minecraft.getInstance();
@@ -74,6 +75,18 @@ public class T800HudClient implements ClientModInitializer {
             if (dirty) Config.save();
 
             tickNightVision(mc);
+            if (mc.player != null && Config.deathRecovery) {
+                if (mc.player.isDeadOrDying() && !deathRecorded) {
+                    Config.deathX = mc.player.blockPosition().getX();
+                    Config.deathY = mc.player.blockPosition().getY();
+                    Config.deathZ = mc.player.blockPosition().getZ();
+                    Config.hasDeathLocation = true;
+                    Config.save();
+                    deathRecorded = true;
+                } else if (mc.player.isAlive()) {
+                    deathRecorded = false;
+                }
+            }
             if (Config.hud) TRACKER.tick(mc); else TRACKER.clear();
         });
 
