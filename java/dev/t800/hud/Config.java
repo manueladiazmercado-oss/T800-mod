@@ -13,6 +13,8 @@ public final class Config {
     private Config() {}
 
     public static boolean hud = true, vision = false, nightVision = false, customBars = true,
+            terminationMode = false, combatAnalytics = true, armorAlerts = true, terrainLayer = true,
+            performanceProfile = false, deathRecovery = true,
             showSystem = true, showStatus = true, showCompass = true, showTarget = true,
             showEffects = true, boot = true, vignette = true, damageFlash = true, sounds = true;
     public static int theme = 0, rangeIdx = 1, coneIdx = 1, sizeIdx = 1;
@@ -66,7 +68,13 @@ public final class Config {
             Properties p = new Properties();
             try (InputStream in = Files.newInputStream(f)) { p.load(in); }
             hud = b(p, "hud", true); vision = b(p, "vision", false); nightVision = b(p, "nightVision", false);
-            customBars = b(p, "customBars", true); showSystem = b(p, "showSystem", true);
+            customBars = b(p, "customBars", true);
+            terminationMode = b(p, "terminationMode", false);
+            combatAnalytics = b(p, "combatAnalytics", true);
+            armorAlerts = b(p, "armorAlerts", true);
+            terrainLayer = b(p, "terrainLayer", true);
+            performanceProfile = b(p, "performanceProfile", false);
+            deathRecovery = b(p, "deathRecovery", true); showSystem = b(p, "showSystem", true);
             showStatus = b(p, "showStatus", true); showCompass = b(p, "showCompass", true);
             showTarget = b(p, "showTarget", true); showEffects = b(p, "showEffects", true);
             boot = b(p, "boot", true); vignette = b(p, "vignette", true);
@@ -82,6 +90,12 @@ public final class Config {
             Properties p = new Properties();
             p.setProperty("hud", String.valueOf(hud)); p.setProperty("vision", String.valueOf(vision));
             p.setProperty("nightVision", String.valueOf(nightVision)); p.setProperty("customBars", String.valueOf(customBars));
+            p.setProperty("terminationMode", String.valueOf(terminationMode));
+            p.setProperty("combatAnalytics", String.valueOf(combatAnalytics));
+            p.setProperty("armorAlerts", String.valueOf(armorAlerts));
+            p.setProperty("terrainLayer", String.valueOf(terrainLayer));
+            p.setProperty("performanceProfile", String.valueOf(performanceProfile));
+            p.setProperty("deathRecovery", String.valueOf(deathRecovery));
             p.setProperty("showSystem", String.valueOf(showSystem)); p.setProperty("showStatus", String.valueOf(showStatus));
             p.setProperty("showCompass", String.valueOf(showCompass)); p.setProperty("showTarget", String.valueOf(showTarget));
             p.setProperty("showEffects", String.valueOf(showEffects)); p.setProperty("boot", String.valueOf(boot));
