@@ -21,6 +21,10 @@ public class TargetTracker {
     public Mode mode = Mode.ALL;
     public LivingEntity target;
     public long lockSince;
+    public float observedTargetHealth = -1;
+    public float recentDamage;
+    public double estimatedDps;
+    public long damageSampleTime;
 
     public int kills;
     public long killTime;
@@ -45,10 +49,18 @@ public class TargetTracker {
         mode = Mode.values()[(mode.ordinal() + 1) % Mode.values().length];
         Config.mode = mode.name();
         target = null;
+        observedTargetHealth = -1;
+        recentDamage = 0;
+        estimatedDps = 0;
+        damageSampleTime = 0;
     }
 
     public void clear() {
         target = null;
+        observedTargetHealth = -1;
+        recentDamage = 0;
+        estimatedDps = 0;
+        damageSampleTime = 0;
         total = players = hostile = other = 0;
         onScreen = false;
     }
@@ -116,12 +128,33 @@ public class TargetTracker {
         }
 
         if (best != target) {
+            observedTargetHealth = best == null ? -1 : best.getHealth();
+            recentDamage = 0;
+            estimatedDps = 0;
+            damageSampleTime = Util.getMillis();
             if (best != null && Config.sounds) {
                 mc.getSoundManager().play(SimpleSoundInstance.forUI(SoundEvents.UI_BUTTON_CLICK, 1.9f));
             }
             target = best;
             lockSince = Util.getMillis();
             smoothInit = false;
+        }
+
+        // Estimate observed health loss while this target is tracked.
+        if (target != null && target.isAlive()) {
+            long now = Util.getMillis();
+            float hp = target.getHealth();
+            if (observedTargetHealth >= 0 && hp < observedTargetHealth) {
+                recentDamage += observedTargetHealth - hp;
+                long elapsed = Math.max(1, now - damageSampleTime);
+                estimatedDps = recentDamage * 1000.0 / elapsed;
+            }
+            if (now - damageSampleTime > 5000) {
+                recentDamage *= 0.5f;
+                damageSampleTime = now;
+                estimatedDps = recentDamage / 5.0;
+            }
+            observedTargetHealth = hp;
         }
     }
 
