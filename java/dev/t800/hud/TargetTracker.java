@@ -127,6 +127,12 @@ public class TargetTracker {
             if (score > bestScore) { bestScore = score; best = e; }
         }
 
+        // Termination mode retains the current living target while it remains loaded and in range.
+        if (Config.terminationMode && target != null && target.isAlive()
+                && target.distanceTo(p) <= range && lvl.getEntity(target.getId()) == target) {
+            best = target;
+        }
+
         if (best != target) {
             observedTargetHealth = best == null ? -1 : best.getHealth();
             recentDamage = 0;
