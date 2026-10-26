@@ -27,7 +27,7 @@ public class SettingsScreen extends Screen {
         opts.clear();
         opts.add(new Opt("HUD", () -> onOff(Config.hud), () -> Config.hud = !Config.hud));
         opts.add(new Opt("Theme", () -> Config.THEMES[Config.theme], () -> Config.theme = (Config.theme + 1) % Config.THEMES.length));
-        opts.add(new Opt("Night Vision", () -> onOff(Config.nightVision), () -> Config.nightVision = !Config.nightVision));
+        opts.add(new Opt("Night Vision", () -> onOff(Config.nightVision), () -> Config.nightVision = !Config.nightVision));\n        opts.add(new Opt("Infrared Vision [I]", () -> onOff(Config.infraredVision), () -> Config.infraredVision = !Config.infraredVision));
         opts.add(new Opt("Terminator Vision", () -> onOff(Config.vision), () -> Config.vision = !Config.vision));
         opts.add(new Opt("Custom Bars", () -> onOff(Config.customBars), () -> Config.customBars = !Config.customBars));
         opts.add(new Opt("Target Mode", () -> T800HudClient.TRACKER.mode.name(), () -> T800HudClient.TRACKER.cycleMode()));
@@ -82,7 +82,7 @@ public class SettingsScreen extends Screen {
         String title = "T-800 // SYSTEM CONFIGURATION";
         HudRenderer.skull(g, this.width / 2.0 - this.font.width(title) * 0.5 - 18, 9, 12);
         HudRenderer.text(g, this.font, title, this.width / 2.0 - this.font.width(title) * 0.5, 12, 1.0f, Config.main());
-        String hint = "H HUD | J Mode | K Vision | N Night | Y Armor | F4 Analytics | F6 GigaMap | F8 Lock | F9 Performance";
+        String hint = "H HUD | J Mode | K Vision | N Night | Y Armor | F4 Analytics | F6 GigaMap | F8 Lock | F9 Performance | I Infrared";
         HudRenderer.text(g, this.font, hint, Math.max(4, this.width / 2.0 - this.font.width(hint) * 0.25), 24, 0.5f, Config.dim());
     }
 
