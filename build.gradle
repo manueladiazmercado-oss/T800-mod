@@ -16,9 +16,22 @@ dependencies {
     modImplementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_version}"
 }
 
+// The complete, newer client implementation lives in /java. The old src/main/java
+// copies are intentionally not compiled to avoid duplicate class definitions.
+sourceSets {
+    main {
+        java.setSrcDirs(['java'])
+        resources.setSrcDirs(['src/main/resources'])
+    }
+}
+
 processResources {
     inputs.property "version", project.version
     filesMatching("fabric.mod.json") { expand "version": inputs.properties.version }
+    // Bundle optional built-in resource packs that are stored outside Gradle's default resource tree.
+    from('resources') {
+        include 'resourcepacks/**'
+    }
 }
 
 tasks.withType(JavaCompile).configureEach { options.release = 21 }
