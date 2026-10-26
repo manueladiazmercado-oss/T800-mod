@@ -23,7 +23,8 @@ public class T800HudClient implements ClientModInitializer {
     public static final String MOD_ID = "t800hud";
     public static final TargetTracker TRACKER = new TargetTracker();
 
-    private static KeyMapping toggleKey, modeKey, visionKey, nightKey, armorKey, settingsKey;
+    private static KeyMapping toggleKey, modeKey, visionKey, nightKey, armorKey, settingsKey,
+            analyticsKey, gigaMapKey, terminationKey, performanceKey;
     private static boolean nvApplied;
 
     private static boolean hideVanillaBars() {
@@ -53,6 +54,10 @@ public class T800HudClient implements ClientModInitializer {
         nightKey = reg("key.t800hud.night", GLFW.GLFW_KEY_N, category);
         armorKey = reg("key.t800hud.armor", GLFW.GLFW_KEY_Y, category);
         settingsKey = reg("key.t800hud.settings", GLFW.GLFW_KEY_RIGHT_SHIFT, category);
+        analyticsKey = reg("key.t800hud.analytics", GLFW.GLFW_KEY_F4, category);
+        gigaMapKey = reg("key.t800hud.gigamap", GLFW.GLFW_KEY_F6, category);
+        terminationKey = reg("key.t800hud.termination", GLFW.GLFW_KEY_F8, category);
+        performanceKey = reg("key.t800hud.performance", GLFW.GLFW_KEY_F9, category);
 
         ClientTickEvents.END_CLIENT_TICK.register(mc -> {
             boolean dirty = false;
@@ -62,6 +67,10 @@ public class T800HudClient implements ClientModInitializer {
             while (nightKey.consumeClick()) { Config.nightVision = !Config.nightVision; dirty = true; }
             while (armorKey.consumeClick()) { if (mc.screen == null && mc.player != null) mc.setScreen(new ArmorScreen()); }
             while (settingsKey.consumeClick()) { if (mc.screen == null) mc.setScreen(new SettingsScreen()); }
+            while (analyticsKey.consumeClick()) { if (mc.screen == null && mc.player != null) mc.setScreen(new CombatAnalyticsScreen()); }
+            while (gigaMapKey.consumeClick()) { if (mc.screen == null && mc.player != null) mc.setScreen(new GigaMapScreen()); }
+            while (terminationKey.consumeClick()) { Config.terminationMode = !Config.terminationMode; dirty = true; }
+            while (performanceKey.consumeClick()) { Config.performanceProfile = !Config.performanceProfile; dirty = true; }
             if (dirty) Config.save();
 
             tickNightVision(mc);
