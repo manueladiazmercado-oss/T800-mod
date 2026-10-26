@@ -68,7 +68,7 @@ public class HudRenderer implements HudElement {
         updateDamage(mc.player, now);
 
         if (Config.vignette && !Config.performanceProfile) drawVignette(g, w, h);
-        if (Config.vision && !Config.performanceProfile) drawVision(g, w, h, now);
+        if (Config.vision && !Config.performanceProfile) drawVision(g, w, h, now);\n        if (Config.infraredVision && !Config.performanceProfile) drawInfrared(g, mc, w, h, now);
         if (Config.damageFlash && !Config.performanceProfile) drawDamageFlash(g, w, h, now);
 
         t.project(mc, pt, w, h);
@@ -142,6 +142,20 @@ public class HudRenderer implements HudElement {
         g.fill(0, sweep, w, sweep + 1, alpha(rgb, 0.25));
     }
 
+    /** Lightweight thermal-style overlay; deliberately HUD-only to avoid unsafe renderer hooks. */
+    private void drawInfrared(GuiGraphics g, Minecraft mc, int w, int h, long now) {
+        g.fill(0, 0, w, h, alpha(0x16251B, 0.28));
+        for (int y = 0; y < h; y += 4) g.fill(0, y, w, y + 1, 0x1800FF88);
+        int sweep = (int) ((now / 14) % (h + 80)) - 40;
+        g.fillGradient(0, sweep - 24, w, sweep, 0x0000FF00, 0x5530FF80);
+        g.fill(0, sweep, w, sweep + 1, 0xAA60FFB0);
+        Font f = mc.font;
+        String label = "THERMAL / IR SENSOR ACTIVE";
+        text(g, f, label, w / 2.0 - textW(f, label, 0.65f) / 2, 8, 0.65f, 0xFF70FFB0);
+        String light = String.format("LUX %d", mc.level.getBrightness(LightLayer.BLOCK, mc.player.blockPosition()));
+        text(g, f, light, w - textW(f, light, 0.5f) - 8, 8, 0.5f, 0xFF70FFB0);
+    }
+
     private void updateDamage(LocalPlayer p, long now) {
         float hp = p.getHealth();
         if (lastHealth >= 0 && hp < lastHealth - 0.01f) { dmgTime = now; dmgAmount = lastHealth - hp; }
@@ -194,7 +208,7 @@ public class HudRenderer implements HudElement {
                 dur = String.format("  %d%%", 100 * (hand.getMaxDamage() - hand.getDamageValue()) / Math.max(1, hand.getMaxDamage()));
             lines.add("HLD  " + hn + dur);
         }
-        lines.add("MODE " + t.mode.name() + (Config.nightVision ? "  NV" : "") + (Config.vision ? "  VIS" : ""));
+        lines.add("MODE " + t.mode.name() + (Config.nightVision ? "  NV" : "") + (Config.vision ? "  VIS" : "") + (Config.infraredVision ? "  IR" : ""));
         if (Config.deathRecovery && Config.hasDeathLocation)
             lines.add(String.format("LAST DEATH %d %d %d", Config.deathX, Config.deathY, Config.deathZ));
 
