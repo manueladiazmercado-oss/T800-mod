@@ -5,18 +5,24 @@ import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.core.BlockPos;
+import net.minecraft.network.chat.Component;
+import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.monster.Enemy;
+import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.levelgen.Heightmap;
-import net.minecraft.world.level.material.MapColor;
-import net.minecraft.network.chat.Component;
 
-/** GigaMap prototype: only samples terrain from chunks already loaded by the client. */
+/**
+ * Client-side surface map. Only reads chunks already loaded by the client;
+ * zoom changes the number of blocks represented by each sampled map cell.
+ */
 public class GigaMapScreen extends Screen {
     private static final int CELLS = 41;
-    private static final int CELL = 5;
+    private static final int[] ZOOM = {1, 2, 4, 8, 16};
+    private int zoomIndex = 0;
     private boolean rotateWithPlayer = true;
     private final int[][] terrainColors = new int[CELLS][CELLS];
-    private int cachedX = Integer.MIN_VALUE, cachedZ = Integer.MIN_VALUE, cachedYaw = Integer.MIN_VALUE;
+    private int cachedX = Integer.MIN_VALUE, cachedZ = Integer.MIN_VALUE, cachedYaw = Integer.MIN_VALUE, cachedZoom = -1;
     private boolean cachedTerrainLayer;
     private boolean cacheReady;
 
@@ -24,78 +30,134 @@ public class GigaMapScreen extends Screen {
 
     @Override
     protected void init() {
-        addRenderableWidget(Button.builder(Component.literal("ROTATION: " + (rotateWithPlayer ? "PLAYER" : "NORTH")), b -> {
+        int y = height - 27;
+        addRenderableWidget(Button.builder(Component.literal("ROTATE: " + (rotateWithPlayer ? "PLAYER" : "NORTH")), b -> {
             rotateWithPlayer = !rotateWithPlayer;
-            b.setMessage(Component.literal("ROTATION: " + (rotateWithPlayer ? "PLAYER" : "NORTH")));
-        }).bounds(width / 2 - 145, height - 28, 130, 20).build());
-        addRenderableWidget(Button.builder(Component.literal("TERRAIN LAYER: " + (Config.terrainLayer ? "ON" : "OFF")), b -> {
+            cacheReady = false;
+            b.setMessage(Component.literal("ROTATE: " + (rotateWithPlayer ? "PLAYER" : "NORTH")));
+        }).bounds(8, y, Math.max(82, width / 5 - 6), 20).build());
+        addRenderableWidget(Button.builder(Component.literal("ZOOM -"), b -> {
+            zoomIndex = Math.min(ZOOM.length - 1, zoomIndex + 1);
+            cacheReady = false;
+        }).bounds(width / 5 + 5, y, Math.max(55, width / 7 - 8), 20).build());
+        addRenderableWidget(Button.builder(Component.literal("ZOOM +"), b -> {
+            zoomIndex = Math.max(0, zoomIndex - 1);
+            cacheReady = false;
+        }).bounds(width / 5 + width / 7, y, Math.max(55, width / 7 - 8), 20).build());
+        addRenderableWidget(Button.builder(Component.literal("TERRAIN: " + (Config.terrainLayer ? "ON" : "OFF")), b -> {
             Config.terrainLayer = !Config.terrainLayer;
             Config.save();
-            b.setMessage(Component.literal("TERRAIN LAYER: " + (Config.terrainLayer ? "ON" : "OFF")));
-        }).bounds(width / 2 + 15, height - 28, 130, 20).build());
+            cacheReady = false;
+            b.setMessage(Component.literal("TERRAIN: " + (Config.terrainLayer ? "ON" : "OFF")));
+        }).bounds(width - Math.max(100, width / 4) - 8, y, Math.max(100, width / 4), 20).build());
     }
 
-    private void rebuildTerrainCache(Minecraft mc, int px, int pz, int centerY, int yawStep) {
-        for (int gz = -CELLS / 2; gz <= CELLS / 2; gz++) {
-            for (int gx = -CELLS / 2; gx <= CELLS / 2; gx++) {
-                int rx = gx, rz = gz;
+    private void rebuildTerrainCache(Minecraft mc, int anchorX, int anchorZ, int yawStep) {
+        int scale = ZOOM[zoomIndex];
+        int centerY = mc.player.blockPosition().getY();
+        for (int gz = 0; gz < CELLS; gz++) {
+            for (int gx = 0; gx < CELLS; gx++) {
+                int dx = (gx - CELLS / 2) * scale;
+                int dz = (gz - CELLS / 2) * scale;
+                int rx = dx, rz = dz;
                 switch (Math.floorMod(yawStep, 4)) {
-                    case 1 -> { rx = -gz; rz = gx; }
-                    case 2 -> { rx = -gx; rz = -gz; }
-                    case 3 -> { rx = gz; rz = -gx; }
+                    case 1 -> { rx = -dz; rz = dx; }
+                    case 2 -> { rx = -dx; rz = -dz; }
+                    case 3 -> { rx = dz; rz = -dx; }
                 }
-                int wx = px + rx, wz = pz + rz;
-                int color = 0xAA16191F;
+                int wx = anchorX + rx, wz = anchorZ + rz;
+                int color = 0xFF111720;
                 BlockPos probe = new BlockPos(wx, centerY, wz);
                 if (mc.level.hasChunkAt(probe)) {
                     int topY = mc.level.getHeight(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, wx, wz);
                     BlockPos surface = new BlockPos(wx, Math.max(mc.level.getMinY(), topY - 1), wz);
                     BlockState state = mc.level.getBlockState(surface);
                     int rgb = state.getMapColor(mc.level, surface).col;
-                    if (!Config.terrainLayer) color = 0xFF202830;
-                    else {
-                        int shade = Math.max(0x55, Math.min(0xFF, 0xA0 + (topY - centerY) * 2));
-                        color = (shade << 24) | (rgb & 0x00FFFFFF);
+                    if (!Config.terrainLayer) {
+                        color = 0xFF252D38;
+                    } else {
+                        int shade = Math.max(70, Math.min(255, 160 + (topY - centerY) * 3));
+                        color = (0xFF << 24) | ((rgb & 0x00FFFFFF) * shade / 255 & 0x00FFFFFF);
+                        // Preserve terrain hues while adding clear height contrast.
+                        int r = ((rgb >> 16) & 255) * shade / 190;
+                        int g = ((rgb >> 8) & 255) * shade / 190;
+                        int b = (rgb & 255) * shade / 190;
+                        color = 0xFF000000 | (Math.min(255, r) << 16) | (Math.min(255, g) << 8) | Math.min(255, b);
                     }
                 }
-                terrainColors[gz + CELLS / 2][gx + CELLS / 2] = color;
+                terrainColors[gz][gx] = color;
             }
         }
-        cachedX = px; cachedZ = pz; cachedYaw = yawStep;
+        cachedX = anchorX; cachedZ = anchorZ; cachedYaw = yawStep;
+        cachedZoom = zoomIndex;
         cachedTerrainLayer = Config.terrainLayer;
         cacheReady = true;
     }
 
     @Override
     public void render(GuiGraphics g, int mouseX, int mouseY, float pt) {
-        // Avoid Screen.renderBackground: Minecraft 1.21.11 can throw if blur is requested twice in one frame.
-        g.fill(0, 0, width, height, 0xE610141B);
+        g.fill(0, 0, width, height, 0xF00A0E14);
         super.render(g, mouseX, mouseY, pt);
         Minecraft mc = Minecraft.getInstance();
         if (mc.player == null || mc.level == null) return;
-        int cx = width / 2, cy = height / 2 - 4;
+
+        int scale = ZOOM[zoomIndex];
         int px = mc.player.blockPosition().getX(), pz = mc.player.blockPosition().getZ();
-        int startX = cx - CELLS * CELL / 2, startY = cy - CELLS * CELL / 2;
-        HudRenderer.text(g, font, "T-800 // GIGAMAP PROTOTYPE", startX, startY - 18, 0.85f, Config.main());
-        HudRenderer.text(g, font, "LOADED CHUNKS ONLY // NO SERVER OR UNEXPLORED-TERRAIN REVEAL", startX, startY - 8, 0.45f, Config.dim());
+        int anchorX = Math.floorDiv(px, scale) * scale;
+        int anchorZ = Math.floorDiv(pz, scale) * scale;
         int yawStep = rotateWithPlayer ? Math.round(mc.player.getYRot() / 90f) : 0;
-        int centerY = mc.player.blockPosition().getY();
-        if (!cacheReady || px != cachedX || pz != cachedZ || yawStep != cachedYaw
-                || cachedTerrainLayer != Config.terrainLayer) {
-            rebuildTerrainCache(mc, px, pz, centerY, yawStep);
+        if (!cacheReady || anchorX != cachedX || anchorZ != cachedZ || yawStep != cachedYaw
+                || cachedZoom != zoomIndex || cachedTerrainLayer != Config.terrainLayer) {
+            rebuildTerrainCache(mc, anchorX, anchorZ, yawStep);
         }
-        for (int gz = -CELLS / 2; gz <= CELLS / 2; gz++) {
-            for (int gx = -CELLS / 2; gx <= CELLS / 2; gx++) {
-                int sx = startX + (gx + CELLS / 2) * CELL;
-                int sy = startY + (gz + CELLS / 2) * CELL;
-                g.fill(sx, sy, sx + CELL - 1, sy + CELL - 1,
-                        terrainColors[gz + CELLS / 2][gx + CELLS / 2]);
+
+        int margin = 12;
+        int mapSize = Math.max(82, Math.min(width - margin * 2, height - 76));
+        int cellSize = Math.max(1, mapSize / CELLS);
+        mapSize = cellSize * CELLS;
+        int mapX = (width - mapSize) / 2;
+        int mapY = Math.max(32, (height - mapSize - 32) / 2);
+        g.fill(mapX - 3, mapY - 3, mapX + mapSize + 3, mapY + mapSize + 3, 0xFF05080D);
+        HudRenderer.text(g, font, "T-800 // GIGAMAP", mapX, Math.max(4, mapY - 20), 0.8f, Config.main());
+        HudRenderer.text(g, font, "SURFACE SCAN • LOADED CHUNKS ONLY", mapX, Math.max(14, mapY - 10), 0.45f, Config.dim());
+
+        for (int gz = 0; gz < CELLS; gz++) {
+            for (int gx = 0; gx < CELLS; gx++) {
+                int sx = mapX + gx * cellSize;
+                int sy = mapY + gz * cellSize;
+                g.fill(sx, sy, sx + cellSize, sy + cellSize, terrainColors[gz][gx]);
             }
         }
-        g.fill(cx - 3, cy - 3, cx + 4, cy + 4, Config.main());
-        HudRenderer.text(g, font, "N", cx - 2, startY - 2, 0.5f, Config.text());
-        HudRenderer.text(g, font, String.format("X %d  Y %d  Z %d  |  SCALE 1 CELL = 1 BLOCK",
-                px, centerY, pz), startX, startY + CELLS * CELL + 5, 0.55f, Config.text());
-        HudRenderer.text(g, font, "CAVE VIEW / STRUCTURE BOOKMARKS / 3D ROTATION ARE NOT YET IMPLEMENTED", startX, startY + CELLS * CELL + 15, 0.48f, HudRenderer.AMBER);
+
+        // Plot currently loaded living entities relative to the player. No chunk is forced to load.
+        double halfBlocks = CELLS * scale / 2.0;
+        var entities = mc.level.getEntitiesOfClass(LivingEntity.class,
+                mc.player.getBoundingBox().inflate(halfBlocks + scale),
+                e -> e != mc.player && e.isAlive());
+        for (LivingEntity e : entities) {
+            double dx = e.getX() - px, dz = e.getZ() - pz;
+            double rx = dx, rz = dz;
+            switch (Math.floorMod(yawStep, 4)) {
+                case 1 -> { rx = -dz; rz = dx; }
+                case 2 -> { rx = -dx; rz = -dz; }
+                case 3 -> { rx = dz; rz = -dx; }
+            }
+            int gx = CELLS / 2 + (int) Math.round(rx / scale);
+            int gz = CELLS / 2 + (int) Math.round(rz / scale);
+            if (gx < 0 || gx >= CELLS || gz < 0 || gz >= CELLS) continue;
+            int color = e instanceof Player ? 0xFF4FC3FF : e instanceof Enemy ? 0xFFFF4242 : 0xFFFFD166;
+            int dot = Math.max(2, cellSize);
+            g.fill(mapX + gx * cellSize, mapY + gz * cellSize,
+                    mapX + gx * cellSize + dot, mapY + gz * cellSize + dot, color);
+        }
+
+        int cx = mapX + (CELLS / 2) * cellSize;
+        int cy = mapY + (CELLS / 2) * cellSize;
+        g.fill(cx - 2, cy - 2, cx + cellSize + 2, cy + cellSize + 2, Config.main());
+        HudRenderer.text(g, font, "N", mapX + mapSize - 7, mapY + 2, 0.5f, Config.text());
+        HudRenderer.text(g, font, String.format("X %d  Y %d  Z %d   •   1 CELL = %d BLOCK(S)", px,
+                mc.player.blockPosition().getY(), pz, scale), 10, height - 39, 0.48f, Config.text());
+        HudRenderer.text(g, font, "RED HOSTILE  •  BLUE PLAYER  •  YELLOW OTHER  •  CAVES/STRUCTURE BOOKMARKS NOT INCLUDED",
+                10, height - 48, 0.40f, HudRenderer.AMBER);
     }
 }
