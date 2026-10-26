@@ -63,6 +63,11 @@ public final class Config {
         catch (Exception e) { return d; }
     }
 
+    private static int signed(Properties p, String k, int d) {
+        try { return Integer.parseInt(p.getProperty(k, String.valueOf(d))); }
+        catch (Exception e) { return d; }
+    }
+
     public static void load() {
         try {
             Path f = file();
@@ -85,9 +90,9 @@ public final class Config {
             coneIdx = i(p, "coneIdx", 1, CONES.length - 1); sizeIdx = i(p, "sizeIdx", 1, SIZES.length - 1);
             mode = p.getProperty("mode", "ALL");
             hasDeathLocation = b(p, "hasDeathLocation", false);
-            deathX = i(p, "deathX", 0, Integer.MAX_VALUE);
-            deathY = i(p, "deathY", 0, Integer.MAX_VALUE);
-            deathZ = i(p, "deathZ", 0, Integer.MAX_VALUE);
+            deathX = signed(p, "deathX", 0);
+            deathY = signed(p, "deathY", 0);
+            deathZ = signed(p, "deathZ", 0);
         } catch (Exception ignored) { }
     }
 
