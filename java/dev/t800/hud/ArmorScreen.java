@@ -67,7 +67,13 @@ public class ArmorScreen extends Screen {
         float lookX = inside ? mouseX : (float) ((mx1 + mx2) / 2.0 + Math.sin(t) * 75);
         float lookY = inside ? mouseY : (float) ((my1 + my2) / 2.0 - 30);
         int size = Math.max(40, (my2 - my1) / 2 - 8);
-        InventoryScreen.renderEntityInInventoryFollowsMouse(g, mx1, my1, mx2, my2, size, 0.0625f, lookX, lookY, p);
+        try {
+            InventoryScreen.renderEntityInInventoryFollowsMouse(g, mx1, my1, mx2, my2, size, 0.0625f, lookX, lookY, p);
+        } catch (RuntimeException ignored) {
+            // A failed player-model render must not crash the whole client screen.
+            HudRenderer.text(g, this.font, "PLAYER MODEL PREVIEW UNAVAILABLE",
+                    mx1 + 6, my1 + 12, 0.48f, HudRenderer.AMBER);
+        }
 
         // ---- totals below the model
         double armor = p.getArmorValue();
