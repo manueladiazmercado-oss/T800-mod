@@ -36,3 +36,26 @@ processResources {
 
 tasks.withType(JavaCompile).configureEach { options.release = 21 }
 java { withSourcesJar(); sourceCompatibility = JavaVersion.VERSION_21; targetCompatibility = JavaVersion.VERSION_21 }
+
+
+// Generate the 64x32 T-800 mechanical Elytra texture as part of the build,
+// so the published JAR contains a real PNG without committing binary blobs.
+def t800ElytraPackDir = layout.buildDirectory.dir("generated/t800ElytraPack/resourcepacks/t800_elytra")
+tasks.register("generateT800ElytraPack") {
+    outputs.dir(t800ElytraPackDir)
+    doLast {
+        def packDir = t800ElytraPackDir.get().asFile
+        def texture = new File(packDir, "assets/minecraft/textures/entity/elytra.png")
+        texture.parentFile.mkdirs()
+        texture.bytes = java.util.Base64.decoder.decode("iVBORw0KGgoAAAANSUhEUgAAAEAAAAAgCAYAAACinX6EAAAClElEQVR4nGNgGAWjYEQDRhhDRknrP7qkrKIyg4GxMYrY/Xv3Ufh3blxD4QeGhMDZRw4fQZFLSkqEs1OjgxiR5WYvXQe3f968+Sj6bGxt4Oz1a9agyKloaKHwFZUUUfgXzp5leHz/LgM6eHLvGiMDAwMDC4YMnYCwhBxGgA8EIJgCCosKqWLRxw8f4OzU6CBG9AB4++IRI3Iq4BcQoIq9/X39lKWA/QcPofDJyQL4kj4ySI0OggfCxw8f4FmBkixACGANgPOMXxkYGBgY/EgyijRwko8Vha/ygnZ2wfxj+J8bQw4eG0LisvDkd5OHiYGBgYFB/cs/qjrk3cvHcPvuqCmjZAGVW3exuoUaAJt/YG6BpwAubl4kLZAQU9cxwFoLbHfaz8DAwMDguc+RYBZAS/5wtvmn3zgd3Nk3Ec6eN28+wSyA7B5stQDDg0sYfnwHpZlwuoIKgNi8jw6Q1SKbQQtAVjXouc+R2u6gCFDiHpqlADVVVTiblNjHpgfZLGoDmmaBoQBoEgCUxj42vbRKBTStBpGrPXTwa4EGSlXHlnADp1pKq0WqV4PIAL0aLK+shLORqz1KAHK12NnejiJHTGeIbtUgmufxJn3Jim8oGB9ANgvZDmoAsgJgu9N+eONjMABK3EO1FEBK7JMDaJUKRhtC1HAArWMfm9nUSgVUrwbxVX3IANuACDH6yKkSiaoG3718zIgYFSK+GgwO9IezSYl9cscD3r18jDJytHb9RhR5YqpB2GgQA8NoUxh7ABj+58Y6eoIOyI19BgbIeAAyJgUg24XsBlwAn39QAgA5aRAClHieGoDUQIABdD+OZgFyNA107GOzm5RUgAwwGkJP7l1jxDZHQG1AbLVHTUBKFh8FIwUAAIiMLVn/pb26AAAAAElFTkSuQmCC")
+        def meta = new File(packDir, "pack.mcmeta")
+        meta.parentFile.mkdirs()
+        meta.text = '{"pack":{"pack_format":75,"description":"T-800 Cybernetic Elytra"}}'
+    }
+}
+processResources.dependsOn(tasks.named("generateT800ElytraPack"))
+processResources {
+    from(t800ElytraPackDir) {
+        include "resourcepacks/**"
+    }
+}
