@@ -2,5 +2,12 @@
   "key.category.t800hud.main": "T-800 HUD",
   "key.t800hud.toggle": "HUD an/aus",
   "key.t800hud.mode": "Zielmodus wechseln (ALLE / SPIELER / FEINDE)",
-  "key.t800hud.vision": "Terminator-Sicht (rote Scanlines)"
+  "key.t800hud.vision": "Terminator-Sicht (Scanline-Overlay)",
+  "key.t800hud.night": "Nachtsicht an/aus",
+  "key.t800hud.armor": "Rüstungsanalyse öffnen",
+  "key.t800hud.settings": "T-800-Einstellungen öffnen",
+  "key.t800hud.analytics": "Kampfanalyse öffnen",
+  "key.t800hud.gigamap": "GigaMap öffnen",
+  "key.t800hud.termination": "Terminierungs-Ziel-Lock an/aus",
+  "key.t800hud.performance": "Performance-Profil an/aus"
 }
