@@ -67,16 +67,16 @@ public class HudRenderer implements HudElement {
         if (mc.level != lastLevel) { lastLevel = mc.level; bootStart = now; lastHealth = -1; }
         updateDamage(mc.player, now);
 
-        if (Config.vignette) drawVignette(g, w, h);
-        if (Config.vision) drawVision(g, w, h, now);
-        if (Config.damageFlash) drawDamageFlash(g, w, h, now);
+        if (Config.vignette && !Config.performanceProfile) drawVignette(g, w, h);
+        if (Config.vision && !Config.performanceProfile) drawVision(g, w, h, now);
+        if (Config.damageFlash && !Config.performanceProfile) drawDamageFlash(g, w, h, now);
 
         t.project(mc, pt, w, h);
         if (Config.showSystem) drawSystemPanel(g, mc, now);
-        if (Config.showCompass) drawCompass(g, mc, w, now);
+        if (Config.showCompass && !Config.performanceProfile) drawCompass(g, mc, w, now);
         double yEnd = 8;
         if (Config.showStatus) yEnd = drawStatusPanel(g, mc, w, now);
-        if (Config.showEffects) drawEffects(g, mc, w, yEnd + 4);
+        if (Config.showEffects && !Config.performanceProfile) drawEffects(g, mc, w, yEnd + 4);
         drawWarnings(g, mc, w, h, now);
         if (Config.customBars && survival(mc)) drawBars(g, mc, w, h, now);
 
@@ -433,7 +433,7 @@ public class HudRenderer implements HudElement {
             text(g, f, s, w / 2.0 - textW(f, s, 0.55f) / 2, wy, 0.55f, AMBER);
             wy += 8;
         }
-        for (EquipmentSlot slot : ARMOR) {
+        if (Config.armorAlerts) for (EquipmentSlot slot : ARMOR) {
             ItemStack a = p.getItemBySlot(slot);
             if (!a.isEmpty() && a.isDamageableItem()
                     && (a.getMaxDamage() - a.getDamageValue()) < a.getMaxDamage() * 0.15 && (now / 600) % 2 == 0) {
