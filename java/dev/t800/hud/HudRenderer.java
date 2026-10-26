@@ -518,6 +518,7 @@ public class HudRenderer implements HudElement {
                 "THREAT " + threat,
                 String.format("COMBAT INDEX %.0f/100", combatScore),
                 "ASSESSMENT " + rating,
+                String.format("OBSERVED DPS %.1f", t.estimatedDps),
                 "TACTIC " + tactic
         };
 
