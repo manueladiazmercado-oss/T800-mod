@@ -26,7 +26,8 @@ public class CombatAnalyticsScreen extends Screen {
 
     @Override
     public void render(GuiGraphics g, int mouseX, int mouseY, float pt) {
-        renderBackground(g, mouseX, mouseY, pt);
+        // Avoid Screen.renderBackground: Minecraft 1.21.11 can throw if blur is requested twice in one frame.
+        g.fill(0, 0, width, height, 0xE610141B);
         super.render(g, mouseX, mouseY, pt);
         Minecraft mc = Minecraft.getInstance();
         int x = Math.max(12, width / 2 - 150);
