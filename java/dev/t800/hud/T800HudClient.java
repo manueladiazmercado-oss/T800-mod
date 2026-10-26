@@ -24,7 +24,7 @@ public class T800HudClient implements ClientModInitializer {
     public static final TargetTracker TRACKER = new TargetTracker();
 
     private static KeyMapping toggleKey, modeKey, visionKey, nightKey, armorKey, settingsKey,
-            analyticsKey, gigaMapKey, terminationKey, performanceKey;
+            analyticsKey, gigaMapKey, terminationKey, performanceKey, infraredKey;
     private static boolean nvApplied;
     private static boolean deathRecorded;
 
@@ -58,7 +58,7 @@ public class T800HudClient implements ClientModInitializer {
         analyticsKey = reg("key.t800hud.analytics", GLFW.GLFW_KEY_F4, category);
         gigaMapKey = reg("key.t800hud.gigamap", GLFW.GLFW_KEY_F6, category);
         terminationKey = reg("key.t800hud.termination", GLFW.GLFW_KEY_F8, category);
-        performanceKey = reg("key.t800hud.performance", GLFW.GLFW_KEY_F9, category);
+        performanceKey = reg("key.t800hud.performance", GLFW.GLFW_KEY_F9, category);\n        infraredKey = reg("key.t800hud.infrared", GLFW.GLFW_KEY_I, category);
 
         ClientTickEvents.END_CLIENT_TICK.register(mc -> {
             boolean dirty = false;
@@ -71,7 +71,7 @@ public class T800HudClient implements ClientModInitializer {
             while (analyticsKey.consumeClick()) { if (mc.screen == null && mc.player != null) mc.setScreen(new CombatAnalyticsScreen()); }
             while (gigaMapKey.consumeClick()) { if (mc.screen == null && mc.player != null) mc.setScreen(new GigaMapScreen()); }
             while (terminationKey.consumeClick()) { Config.terminationMode = !Config.terminationMode; dirty = true; }
-            while (performanceKey.consumeClick()) { Config.performanceProfile = !Config.performanceProfile; dirty = true; }
+            while (performanceKey.consumeClick()) { Config.performanceProfile = !Config.performanceProfile; dirty = true; }\n            while (infraredKey.consumeClick()) { Config.infraredVision = !Config.infraredVision; dirty = true; }
             if (dirty) Config.save();
 
             tickNightVision(mc);
