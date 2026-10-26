@@ -2,5 +2,12 @@
   "key.category.t800hud.main": "T-800 HUD",
   "key.t800hud.toggle": "Toggle HUD",
   "key.t800hud.mode": "Cycle target mode (ALL / PLAYERS / HOSTILE)",
-  "key.t800hud.vision": "Terminator vision (red scanlines)"
+  "key.t800hud.vision": "Terminator vision (scanline overlay)",
+  "key.t800hud.night": "Toggle night vision",
+  "key.t800hud.armor": "Open armor analysis",
+  "key.t800hud.settings": "Open T-800 settings",
+  "key.t800hud.analytics": "Open combat analytics",
+  "key.t800hud.gigamap": "Open GigaMap",
+  "key.t800hud.termination": "Toggle termination target lock",
+  "key.t800hud.performance": "Toggle performance profile"
 }
