@@ -43,6 +43,12 @@ public class SettingsScreen extends Screen {
         opts.add(new Opt("Damage Flash", () -> onOff(Config.damageFlash), () -> Config.damageFlash = !Config.damageFlash));
         opts.add(new Opt("Boot Sequence", () -> onOff(Config.boot), () -> Config.boot = !Config.boot));
         opts.add(new Opt("Sounds", () -> onOff(Config.sounds), () -> Config.sounds = !Config.sounds));
+        opts.add(new Opt("Termination Lock", () -> onOff(Config.terminationMode), () -> Config.terminationMode = !Config.terminationMode));
+        opts.add(new Opt("Combat Analytics", () -> onOff(Config.combatAnalytics), () -> Config.combatAnalytics = !Config.combatAnalytics));
+        opts.add(new Opt("Armor Alerts", () -> onOff(Config.armorAlerts), () -> Config.armorAlerts = !Config.armorAlerts));
+        opts.add(new Opt("Terrain Layer", () -> onOff(Config.terrainLayer), () -> Config.terrainLayer = !Config.terrainLayer));
+        opts.add(new Opt("Performance Profile", () -> onOff(Config.performanceProfile), () -> Config.performanceProfile = !Config.performanceProfile));
+        opts.add(new Opt("Death Recovery", () -> onOff(Config.deathRecovery), () -> Config.deathRecovery = !Config.deathRecovery));
     }
 
     @Override
@@ -76,8 +82,8 @@ public class SettingsScreen extends Screen {
         String title = "T-800 // SYSTEM CONFIGURATION";
         HudRenderer.skull(g, this.width / 2.0 - this.font.width(title) * 0.5 - 18, 9, 12);
         HudRenderer.text(g, this.font, title, this.width / 2.0 - this.font.width(title) * 0.5, 12, 1.0f, Config.main());
-        String hint = "Keys: H HUD | J Target mode | K Vision | N Night vision | Y Armor | RShift Settings";
-        HudRenderer.text(g, this.font, hint, this.width / 2.0 - this.font.width(hint) * 0.25, 24, 0.5f, Config.dim());
+        String hint = "H HUD | J Mode | K Vision | N Night | Y Armor | F4 Analytics | F6 GigaMap | F8 Lock | F9 Performance";
+        HudRenderer.text(g, this.font, hint, Math.max(4, this.width / 2.0 - this.font.width(hint) * 0.25), 24, 0.5f, Config.dim());
     }
 
     @Override
