@@ -12,7 +12,7 @@ import java.util.Properties;
 public final class Config {
     private Config() {}
 
-    public static boolean hud = true, vision = false, nightVision = false, customBars = true,
+    public static boolean hud = true, vision = false, nightVision = false, infraredVision = false, customBars = true,
             terminationMode = false, combatAnalytics = true, armorAlerts = true, terrainLayer = true,
             performanceProfile = false, deathRecovery = true,
             showSystem = true, showStatus = true, showCompass = true, showTarget = true,
@@ -74,7 +74,7 @@ public final class Config {
             if (!Files.exists(f)) return;
             Properties p = new Properties();
             try (InputStream in = Files.newInputStream(f)) { p.load(in); }
-            hud = b(p, "hud", true); vision = b(p, "vision", false); nightVision = b(p, "nightVision", false);
+            hud = b(p, "hud", true); vision = b(p, "vision", false); nightVision = b(p, "nightVision", false); infraredVision = b(p, "infraredVision", false);
             customBars = b(p, "customBars", true);
             terminationMode = b(p, "terminationMode", false);
             combatAnalytics = b(p, "combatAnalytics", true);
@@ -100,7 +100,7 @@ public final class Config {
         try {
             Properties p = new Properties();
             p.setProperty("hud", String.valueOf(hud)); p.setProperty("vision", String.valueOf(vision));
-            p.setProperty("nightVision", String.valueOf(nightVision)); p.setProperty("customBars", String.valueOf(customBars));
+            p.setProperty("nightVision", String.valueOf(nightVision)); p.setProperty("infraredVision", String.valueOf(infraredVision)); p.setProperty("customBars", String.valueOf(customBars));
             p.setProperty("terminationMode", String.valueOf(terminationMode));
             p.setProperty("combatAnalytics", String.valueOf(combatAnalytics));
             p.setProperty("armorAlerts", String.valueOf(armorAlerts));
