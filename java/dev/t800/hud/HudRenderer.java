@@ -195,6 +195,8 @@ public class HudRenderer implements HudElement {
             lines.add("HLD  " + hn + dur);
         }
         lines.add("MODE " + t.mode.name() + (Config.nightVision ? "  NV" : "") + (Config.vision ? "  VIS" : ""));
+        if (Config.deathRecovery && Config.hasDeathLocation)
+            lines.add(String.format("LAST DEATH %d %d %d", Config.deathX, Config.deathY, Config.deathZ));
 
         skull(g, x, y - 2, 9);
         boolean blink = (now / 600) % 2 == 0;
