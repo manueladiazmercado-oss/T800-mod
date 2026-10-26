@@ -494,6 +494,19 @@ public class HudRenderer implements HudElement {
         String name = e.getName().getString();
         if (name.length() > 18) name = name.substring(0, 18);
 
+        // Local heuristic combat analysis: a transparent estimate, not a learned AI model.
+        double healthRatio = Mth.clamp(e.getHealth() / Math.max(1.0f, e.getMaxHealth()), 0, 1);
+        double armorScore = Mth.clamp(e.getArmorValue() / 20.0, 0, 1);
+        double weaponScore = weaponThreat(e);
+        double mobilityScore = Mth.clamp(spd / 6.0, 0, 1);
+        double combatScore = Mth.clamp(healthRatio * 35 + armorScore * 25 + weaponScore * 25
+                + mobilityScore * 15 + (hostile ? 8 : player ? 12 : 0), 0, 100);
+        String rating = combatScore >= 75 ? "EXTREME" : combatScore >= 55 ? "HIGH"
+                : combatScore >= 30 ? "MODERATE" : "LOW";
+        String tactic = dist < 4 && combatScore >= 55 ? "KEEP DISTANCE"
+                : e.getHealth() < e.getMaxHealth() * 0.25f ? "TARGET WEAK"
+                : spd > 5 ? "FAST MOVING" : "TRACK TARGET";
+
         String[] lines = {
                 "ID   " + name.toUpperCase(),
                 "CLS  " + cls,
@@ -502,11 +515,14 @@ public class HudRenderer implements HudElement {
                 "ARM  " + e.getArmorValue(),
                 String.format("SPD  %.1f M/S", spd),
                 "HLD  " + hold.toUpperCase(),
-                "THREAT " + threat
+                "THREAT " + threat,
+                String.format("COMBAT INDEX %.0f/100", combatScore),
+                "ASSESSMENT " + rating,
+                "TACTIC " + tactic
         };
 
         Random rnd = new Random(e.getId() * 31L + now / 120);
-        String hex = String.format("%04X %04X %04X", rnd.nextInt(0x10000), rnd.nextInt(0x10000), rnd.nextInt(0x10000));
+        String hex = String.format("ID %04X  SIG %04X", e.getId() & 0xFFFF, (int) (combatScore * 100) & 0xFFFF);
 
         double maxW = textW(f, hex, s);
         for (String l : lines) maxW = Math.max(maxW, textW(f, l, s));
@@ -517,7 +533,9 @@ public class HudRenderer implements HudElement {
         rect(g, px - 3, py - 1, 0.5, lh * (lines.length + 2) + 6, Config.dim());
         text(g, f, "ANALYSIS", px, py - 6.5, s, Config.dim());
         for (int i = 0; i < lines.length; i++) {
-            int col = (i == 7) ? (threat.equals("HIGH") ? Config.main() : threat.equals("MED") ? AMBER : Config.text()) : Config.text();
+            int col = (i == 7) ? (threat.equals("HIGH") ? Config.main() : threat.equals("MED") ? AMBER : Config.text())
+                    : (i == 8 || i == 9) ? (combatScore >= 75 ? Config.main() : combatScore >= 55 ? AMBER : Config.text())
+                    : Config.text();
             text(g, f, lines[i], px, py + lh * i, s, col);
         }
         double ratio = Mth.clamp(e.getHealth() / Math.max(1f, e.getMaxHealth()), 0, 1);
@@ -525,6 +543,18 @@ public class HudRenderer implements HudElement {
         rect(g, px, by, 40, 1.5, Config.dim());
         rect(g, px, by, 40 * ratio, 1.5, Config.main());
         text(g, f, hex, px, by + 3.5, s, Config.dim());
+    }
+
+    private static double weaponThreat(LivingEntity e) {
+        ItemStack held = e.getMainHandItem();
+        if (held.isEmpty()) return 0.12;
+        if (held.is(Items.NETHERITE_SWORD) || held.is(Items.NETHERITE_AXE)) return 1.0;
+        if (held.is(Items.DIAMOND_SWORD) || held.is(Items.DIAMOND_AXE)) return 0.88;
+        if (held.is(Items.IRON_SWORD) || held.is(Items.IRON_AXE) || held.is(Items.BOW)
+                || held.is(Items.CROSSBOW) || held.is(Items.TRIDENT)) return 0.68;
+        if (held.is(Items.STONE_SWORD) || held.is(Items.STONE_AXE)) return 0.48;
+        if (held.is(Items.WOODEN_SWORD) || held.is(Items.WOODEN_AXE)) return 0.30;
+        return 0.20;
     }
 
     private void drawEdgeHint(GuiGraphics g, Minecraft mc, TargetTracker t, int w, int h, long now) {
