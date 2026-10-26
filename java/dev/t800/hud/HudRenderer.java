@@ -68,7 +68,8 @@ public class HudRenderer implements HudElement {
         updateDamage(mc.player, now);
 
         if (Config.vignette && !Config.performanceProfile) drawVignette(g, w, h);
-        if (Config.vision && !Config.performanceProfile) drawVision(g, w, h, now);\n        if (Config.infraredVision && !Config.performanceProfile) drawInfrared(g, mc, w, h, now);
+        if (Config.vision && !Config.performanceProfile) drawVision(g, w, h, now);
+        if (Config.infraredVision && !Config.performanceProfile) drawInfrared(g, mc, w, h, now);
         if (Config.damageFlash && !Config.performanceProfile) drawDamageFlash(g, w, h, now);
 
         t.project(mc, pt, w, h);
