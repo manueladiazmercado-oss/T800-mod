@@ -18,6 +18,8 @@ public final class Config {
             showSystem = true, showStatus = true, showCompass = true, showTarget = true,
             showEffects = true, boot = true, vignette = true, damageFlash = true, sounds = true;
     public static int theme = 0, rangeIdx = 1, coneIdx = 1, sizeIdx = 1;
+    public static boolean hasDeathLocation = false;
+    public static int deathX, deathY, deathZ;
     public static String mode = "ALL";
 
     public static final String[] THEMES = {"T-800 RED", "CYBER BLUE", "MATRIX GREEN", "AMBER"};
@@ -82,6 +84,10 @@ public final class Config {
             theme = i(p, "theme", 0, THEMES.length - 1); rangeIdx = i(p, "rangeIdx", 1, RANGES.length - 1);
             coneIdx = i(p, "coneIdx", 1, CONES.length - 1); sizeIdx = i(p, "sizeIdx", 1, SIZES.length - 1);
             mode = p.getProperty("mode", "ALL");
+            hasDeathLocation = b(p, "hasDeathLocation", false);
+            deathX = i(p, "deathX", 0, Integer.MAX_VALUE);
+            deathY = i(p, "deathY", 0, Integer.MAX_VALUE);
+            deathZ = i(p, "deathZ", 0, Integer.MAX_VALUE);
         } catch (Exception ignored) { }
     }
 
@@ -104,6 +110,10 @@ public final class Config {
             p.setProperty("theme", String.valueOf(theme)); p.setProperty("rangeIdx", String.valueOf(rangeIdx));
             p.setProperty("coneIdx", String.valueOf(coneIdx)); p.setProperty("sizeIdx", String.valueOf(sizeIdx));
             p.setProperty("mode", mode);
+            p.setProperty("hasDeathLocation", String.valueOf(hasDeathLocation));
+            p.setProperty("deathX", String.valueOf(deathX));
+            p.setProperty("deathY", String.valueOf(deathY));
+            p.setProperty("deathZ", String.valueOf(deathZ));
             try (OutputStream out = Files.newOutputStream(file())) { p.store(out, "T-800 HUD"); }
         } catch (Exception ignored) { }
     }
