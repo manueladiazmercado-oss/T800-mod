@@ -27,6 +27,8 @@ public class T800HudClient implements ClientModInitializer {
             analyticsKey, gigaMapKey, terminationKey, performanceKey, infraredKey;
     private static boolean nvApplied;
     private static boolean deathRecorded;
+    /** F4 toggles the combat-analysis overlay without opening a separate screen. */
+    public static boolean analyticsOverlayVisible;
 
     private static boolean hideVanillaBars() {
         Minecraft mc = Minecraft.getInstance();
@@ -71,7 +73,7 @@ public class T800HudClient implements ClientModInitializer {
             while (nightKey.consumeClick()) { Config.nightVision = !Config.nightVision; dirty = true; }
             while (armorKey.consumeClick()) { if (mc.screen == null && mc.player != null) mc.setScreen(new ArmorScreen()); }
             while (settingsKey.consumeClick()) { if (mc.screen == null) mc.setScreen(new SettingsScreen()); }
-            while (analyticsKey.consumeClick()) { if (mc.screen == null && mc.player != null) mc.setScreen(new CombatAnalyticsScreen()); }
+            while (analyticsKey.consumeClick()) { if (mc.screen == null && mc.player != null) analyticsOverlayVisible = !analyticsOverlayVisible; }
             while (gigaMapKey.consumeClick()) { if (mc.screen == null && mc.player != null) mc.setScreen(new GigaMapScreen()); }
             while (terminationKey.consumeClick()) { Config.terminationMode = !Config.terminationMode; dirty = true; }
             while (performanceKey.consumeClick()) { Config.performanceProfile = !Config.performanceProfile; dirty = true; }
