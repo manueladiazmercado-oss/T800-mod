@@ -93,7 +93,7 @@ public final class VoiceAssistantService {
             // whisper-cli prints progress lines too; keep the final text-like lines.
             transcript = transcript.lines().map(String::trim).filter(s -> !s.isBlank() && !s.startsWith("whisper_")
                     && !s.startsWith("main:") && !s.startsWith("system_info:") && !s.startsWith("ggml_"))
-                    .reduce((a,b) -> b).orElse(transcript).replaceAll("^\\[[^]]*]\\s*", "").trim();
+                    .reduce((a,b) -> b).orElse("").replaceAll("^\\[[^]]*]\\s*", "").trim();
             final String prompt = transcript;
             status = "ASKING LOCAL MODEL...";
             post(mc, "YOU ▶ " + prompt);
