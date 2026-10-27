@@ -93,7 +93,7 @@ public class T800HudClient implements ClientModInitializer {
                     deathRecorded = false;
                 }
             }
-            if (Config.hud) TRACKER.tick(mc); else TRACKER.clear();
+            if (Config.hud) TRACKER.tick(mc); else TRACKER.clear();\n            if (Config.adaptiveCombatAI || Config.multiTargetAnalysis || Config.combatMemory || Config.selfDiagnostics || Config.voiceAssistant) CombatAIService.INSTANCE.tick(mc);
         });
 
         HudElementRegistry.addLast(Identifier.fromNamespaceAndPath(MOD_ID, "hud"), new HudRenderer());
