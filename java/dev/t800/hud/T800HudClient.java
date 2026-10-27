@@ -3,6 +3,8 @@ package dev.t800.hud;
 import com.mojang.blaze3d.platform.InputConstants;
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
+import net.fabricmc.fabric.api.client.screen.v1.ScreenEvents;
+import net.minecraft.client.gui.screens.inventory.InventoryScreen;
 import net.fabricmc.fabric.api.client.keybinding.v1.KeyBindingHelper;
 import net.fabricmc.fabric.api.client.rendering.v1.hud.HudElementRegistry;
 import net.fabricmc.fabric.api.client.rendering.v1.hud.VanillaHudElements;
@@ -118,6 +120,45 @@ public class T800HudClient implements ClientModInitializer {
         });
 
         HudElementRegistry.addLast(Identifier.fromNamespaceAndPath(MOD_ID, "hud"), new HudRenderer());
+
+        // Style the vanilla hotbar/inventory without replacing Minecraft's item handling.
+        ScreenEvents.AFTER_INIT.register((client, screen, scaledWidth, scaledHeight) -> {
+            if (screen instanceof InventoryScreen) {
+                screen.addRenderableOnly((graphics, mouseX, mouseY, delta) -> {
+                    int left = (scaledWidth - 176) / 2;
+                    int top = (scaledHeight - 166) / 2;
+                    int main = Config.main();
+                    int dim = Config.dim();
+                    int panel = 0xB8080D14;
+                    graphics.fill(left - 3, top - 3, left + 179, top + 169, panel);
+                    graphics.fill(left - 3, top - 3, left + 179, top - 2, main);
+                    graphics.fill(left - 3, top + 168, left + 179, top + 169, dim);
+                    graphics.fill(left - 3, top - 3, left - 2, top + 169, dim);
+                    graphics.fill(left + 178, top - 3, left + 179, top + 169, dim);
+                    // Corner brackets around the vanilla slot grid keep item icons and tooltips intact.
+                    int[][] slots = {
+                        {left + 7, top + 7, 18, 18}, {left + 7, top + 25, 18, 18},
+                        {left + 7, top + 43, 18, 18}, {left + 7, top + 61, 18, 18},
+                        {left + 79, top + 17, 18, 18}, {left + 79, top + 35, 18, 18},
+                        {left + 79, top + 53, 18, 18}, {left + 79, top + 71, 18, 18},
+                        {left + 7, top + 83, 162, 54}, {left + 7, top + 141, 162, 18}
+                    };
+                    for (int[] slot : slots) {
+                        int x = slot[0], y = slot[1], sw = slot[2], sh = slot[3];
+                        int corner = Math.min(4, Math.min(sw / 2, sh / 2));
+                        graphics.fill(x, y, x + corner, y + 1, main);
+                        graphics.fill(x, y, x + 1, y + corner, main);
+                        graphics.fill(x + sw - corner, y, x + sw, y + 1, main);
+                        graphics.fill(x + sw - 1, y, x + sw, y + corner, main);
+                        graphics.fill(x, y + sh - 1, x + corner, y + sh, dim);
+                        graphics.fill(x, y + sh - corner, x + 1, y + sh, dim);
+                        graphics.fill(x + sw - corner, y + sh - 1, x + sw, y + sh, dim);
+                        graphics.fill(x + sw - 1, y + sh - corner, x + sw, y + sh, dim);
+                    }
+                    graphics.drawString(client.font, "T-800 // INVENTORY", left + 7, top - 12, main, false);
+                });
+            }
+        });
 
         // hide the vanilla bars while our custom bars are active
         HudElementRegistry.replaceElement(VanillaHudElements.HEALTH_BAR,
