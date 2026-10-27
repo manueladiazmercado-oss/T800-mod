@@ -565,16 +565,16 @@ public class HudRenderer implements HudElement {
         if (self == null) return;
 
         int x = 8;
-        int panelW = Math.min(172, Math.max(132, screenW / 4));
-        int panelH = 112;
-        int y = Math.max(88, Math.min(screenH - panelH - 8, screenH / 2 - panelH / 2));
+        int panelW = Math.min(218, Math.max(174, screenW / 3));
+        int panelH = Math.min(178, screenH - 24);
+        int y = Math.max(72, Math.min(screenH - panelH - 8, screenH / 2 - panelH / 2));
         g.fill(x, y, x + panelW, y + panelH, 0xD0091018);
         g.fill(x, y, x + 2, y + panelH, Config.main());
         g.fill(x + 2, y, x + panelW, y + 1, Config.dim());
 
         Font f = mc.font;
         float sc = 0.52f * Config.scaleMul();
-        double lineH = 7.0 * Config.scaleMul();
+        double lineH = 6.8 * Config.scaleMul();
         double tx = x + 7;
         double ty = y + 5;
         text(g, f, "T-800 // COMBAT ANALYSIS", tx, ty, sc, Config.main());
@@ -604,6 +604,7 @@ public class HudRenderer implements HudElement {
                 : targetScore >= 35 ? "MODERATE" : "LOW";
         String chanceLabel = termChance >= 75 ? "FAVOURABLE" : termChance >= 45 ? "RISKY" : "DANGEROUS";
 
+        CombatAIService ai = CombatAIService.INSTANCE;
         String[] rows = {
                 target.getName().getString().toUpperCase() + " / " + type,
                 String.format("HP %.0f/%.0f  DIST %.1fm", target.getHealth(), target.getMaxHealth(), target.distanceTo(self)),
@@ -614,12 +615,19 @@ public class HudRenderer implements HudElement {
                 String.format("OBSERVED DPS %.1f", tracker.estimatedDps),
                 String.format("THREAT %02.0f/100  %s", targetScore, rank),
                 String.format("TERMINATION EST. %02.0f%%", termChance),
-                "OUTLOOK " + chanceLabel
+                "OUTLOOK " + chanceLabel,
+                "ESTIMATE: HP / ARMOR / WEAPON / RANGE",
+                Config.adaptiveCombatAI ? "TACTIC " + ai.advice() : "TACTIC MODULE OFF",
+                Config.combatMemory ? "MEMORY " + ai.memory(target) : "MEMORY MODULE OFF",
+                Config.survivalProtocol ? String.format("SELF HP %.0f%% ARM %d", self.getHealth() * 100.0 / Math.max(1, self.getMaxHealth()), self.getArmorValue()) : "SURVIVAL MODULE OFF",
+                Config.survivalProtocol ? String.format("ARMOR DURABILITY %d%% FOOD %d/20", ai.armorDurability(self), self.getFoodData().getFoodLevel()) : "RESOURCE SCAN OFF",
+                Config.multiTargetAnalysis ? "THREATS " + ai.threats().size() + " / PRIORITY SORTED" : "MULTI-TARGET OFF",
+                Config.selfDiagnostics ? ai.diagnosis() : "DIAGNOSTICS OFF"
         };
         int colorThreat = targetScore >= 80 ? 0xFFFF4040 : targetScore >= 60 ? AMBER : Config.text();
         for (int i = 0; i < rows.length; i++) {
             int color = (i == 7) ? colorThreat : (i == 8 || i == 9) ? (termChance < 35 ? 0xFFFF4040 : termChance < 60 ? AMBER : Config.main()) : Config.text();
-            text(g, f, rows[i], tx, ty + lineH * i, sc, color);
+            text(g, f, rows[i].length() > 38 ? rows[i].substring(0, 38) : rows[i], tx, ty + lineH * i, sc, color);
         }
         double barY = y + panelH - 7;
         g.fill((int) tx, (int) barY, x + panelW - 7, (int) barY + 2, Config.dim());
