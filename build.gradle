@@ -110,6 +110,133 @@ Enable it in Options > Resource Packs. The elytra remains Minecraft's vanilla 3D
 """
     }
 }
+// Generate a second bundled resource pack: detailed 3D weapon models and cybernetic armor textures.
+def t800GearPackDir = layout.buildDirectory.dir("generated/t800GearPack")
+tasks.register("generateT800GearPack") {
+    outputs.dir(t800GearPackDir)
+    doLast {
+        def root = new File(t800GearPackDir.get().asFile, "resourcepacks/t800_arsenal")
+        def assets = new File(root, "assets/minecraft")
+        def texDir = new File(assets, "textures/item")
+        def modelDir = new File(assets, "models/item")
+        def armorDir = new File(assets, "textures/models/armor")
+        texDir.mkdirs(); modelDir.mkdirs(); armorDir.mkdirs()
+
+        def color = { int r, int gg, int b -> new java.awt.Color(r, gg, b, 255) }
+        def pixelTexture = { File file, String kind, int frame ->
+            def im = new java.awt.image.BufferedImage(16, 16, java.awt.image.BufferedImage.TYPE_INT_ARGB)
+            def g = im.createGraphics()
+            g.setRenderingHint(java.awt.RenderingHints.KEY_ANTIALIASING, java.awt.RenderingHints.VALUE_ANTIALIAS_OFF)
+            g.setColor(color(17, 20, 27)); g.fillRect(0, 0, 16, 16)
+            if (kind == "blade") {
+                for (int y=0; y<16; y++) {
+                    g.setColor(color(67 + (y%3)*9, 76 + (y%2)*8, 88 + (y%3)*7)); g.drawLine(6,y,9,y)
+                    g.setColor(color(153,164,177)); g.drawLine(6,y,6,y)
+                    g.setColor(color(35,41,51)); g.drawLine(9,y,9,y)
+                }
+                g.setColor(color(100, 0, 7)); g.fillRect(7, 2, 1, 11)
+                g.setColor(color(100 + frame*18, 8, 14)); g.fillRect(7, 3, 1, 9)
+                g.setColor(color(210, 220, 230)); g.drawLine(6,1,8,1)
+            } else if (kind == "metal") {
+                for (int y=0; y<16; y++) for (int x=0; x<16; x++) {
+                    int v = ((x+y)%5==0) ? 83 : (((x*3+y*7)%7==0) ? 62 : 35)
+                    g.setColor(color(v, v+4, v+12)); g.fillRect(x,y,1,1)
+                }
+                g.setColor(color(118,128,143)); g.drawRect(2,2,11,11)
+                g.setColor(color(125, 5, 12)); g.fillRect(7,4,2,7)
+                g.setColor(color(210, 12+frame*4, 20)); g.fillRect(7,5,1,5)
+                g.setColor(color(8,10,14)); [3,12].each { int x -> g.fillRect(x,3,2,2); g.fillRect(x,11,2,2) }
+            } else if (kind == "grip") {
+                g.setColor(color(12,14,18)); g.fillRect(4,0,8,16)
+                g.setColor(color(63,69,79)); [1,4,7,10,13].each { int y -> g.drawLine(5,y,10,y+1) }
+                g.setColor(color(112,8,14)); g.drawLine(7,2,7,13)
+                g.setColor(color(175,12,18)); g.drawLine(8,4,8,11)
+            } else if (kind == "glow") {
+                g.setColor(color(75,0,5)); g.fillRect(5,1,6,14)
+                g.setColor(color(180,8,18)); g.fillRect(7,2,2,12)
+                g.setColor(color(255, Math.min(80, 20+frame*8), 28)); g.fillRect(7,4,1,8)
+            }
+            g.dispose(); javax.imageio.ImageIO.write(im, "png", file)
+        }
+        ["blade","metal","grip","glow"].each { String k ->
+            def f = new File(texDir, "t800_${k}.png")
+            pixelTexture(f,k,0)
+            if (k == "glow" || k == "metal") {
+                def meta = new File(texDir, "t800_${k}.png.mcmeta")
+                meta.text = groovy.json.JsonOutput.toJson([animation:[frametime:3, frames:(0..7).collect { [index:it, time:3] }]])
+                // Animation sheets must stack frames vertically; write an 8-frame sheet.
+                def sheet = new java.awt.image.BufferedImage(16,128,java.awt.image.BufferedImage.TYPE_INT_ARGB)
+                for (int fr=0; fr<8; fr++) {
+                    def frameFile = new File(texDir, "frame_tmp.png")
+                    pixelTexture(frameFile,k,fr)
+                    def frameImg = javax.imageio.ImageIO.read(frameFile)
+                    def sg = sheet.createGraphics(); sg.drawImage(frameImg,0,fr*16,null); sg.dispose(); frameFile.delete()
+                }
+                javax.imageio.ImageIO.write(sheet,"png",f)
+            }
+        }
+
+        def face = { String texture -> [north:[uv:[0,0,16,16],texture:"${texture}"], south:[uv:[0,0,16,16],texture:"${texture}"], east:[uv:[0,0,16,16],texture:"${texture}"], west:[uv:[0,0,16,16],texture:"${texture}"], up:[uv:[0,0,16,16],texture:"${texture}"], down:[uv:[0,0,16,16],texture:"${texture}"]] }
+        def cube = { int x1,int y1,int z1,int x2,int y2,int z2,String material ->
+            [from:[x:x1,y:y1,z:z1],to:[x:x2,y:y2,z:z2],faces:face("#${material}")]
+        }
+        def weaponModels = [
+            iron_sword: [cube(6,4,7,10,14,9,"blade"),cube(3,3,6,13,5,10,"metal"),cube(7,0,7,9,4,9,"grip"),cube(6,2,6,10,3,10,"glow")],
+            diamond_sword: [cube(6,4,7,10,14,9,"blade"),cube(3,3,6,13,5,10,"metal"),cube(7,0,7,9,4,9,"grip"),cube(6,2,6,10,3,10,"glow")],
+            netherite_sword: [cube(6,4,7,10,14,9,"blade"),cube(3,3,6,13,5,10,"metal"),cube(7,0,7,9,4,9,"grip"),cube(6,2,6,10,3,10,"glow")],
+            iron_axe: [cube(6,1,7,10,6,9,"grip"),cube(7,5,7,9,12,9,"grip"),cube(3,9,6,12,14,10,"metal"),cube(1,8,6,5,13,10,"blade"),cube(5,10,6,8,13,10,"glow")],
+            diamond_axe: [cube(6,1,7,10,6,9,"grip"),cube(7,5,7,9,12,9,"grip"),cube(3,9,6,12,14,10,"metal"),cube(1,8,6,5,13,10,"blade"),cube(5,10,6,8,13,10,"glow")],
+            netherite_axe: [cube(6,1,7,10,6,9,"grip"),cube(7,5,7,9,12,9,"grip"),cube(3,9,6,12,14,10,"metal"),cube(1,8,6,5,13,10,"blade"),cube(5,10,6,8,13,10,"glow")],
+            iron_pickaxe: [cube(2,11,6,14,14,10,"metal"),cube(3,9,7,6,12,9,"blade"),cube(10,9,7,13,12,9,"blade"),cube(7,1,7,9,12,9,"grip"),cube(7,4,6,9,7,10,"glow")],
+            netherite_pickaxe: [cube(2,11,6,14,14,10,"metal"),cube(3,9,7,6,12,9,"blade"),cube(10,9,7,13,12,9,"blade"),cube(7,1,7,9,12,9,"grip"),cube(7,4,6,9,7,10,"glow")]
+        ]
+        weaponModels.each { String name, def elements ->
+            def model = [parent:"minecraft:item/handheld", textures:[blade:"minecraft:item/t800_blade",metal:"minecraft:item/t800_metal",grip:"minecraft:item/t800_grip",glow:"minecraft:item/t800_glow"], elements:elements]
+            new File(modelDir,"${name}.json").text = groovy.json.JsonOutput.prettyPrint(groovy.json.JsonOutput.toJson(model))
+        }
+
+        // High-detail pixel-art cybernetic armor overlays for chestplate, leggings and boots.
+        // The base layer textures keep the vanilla 64x32 UV layout.
+        ["iron","diamond","netherite"].each { String tier ->
+            [1,2].each { int layer ->
+                def im = new java.awt.image.BufferedImage(64,32,java.awt.image.BufferedImage.TYPE_INT_ARGB)
+                def g = im.createGraphics()
+                g.setRenderingHint(java.awt.RenderingHints.KEY_ANTIALIASING, java.awt.RenderingHints.VALUE_ANTIALIAS_OFF)
+                // Keep transparent pixels outside the armor UV islands.
+                def islands = layer == 1 ? [[8,0,8,8],[20,0,8,8],[0,8,8,12],[16,8,8,12],[40,8,8,12],[32,8,8,12],[4,20,4,12],[20,20,4,12],[44,20,4,12],[52,20,4,12]] : [[20,0,8,4],[0,4,8,12],[16,4,8,12],[40,4,8,12],[32,4,8,12],[4,16,4,12],[20,16,4,12],[44,16,4,12],[52,16,4,12]]
+                islands.each { a ->
+                    for (int y=a[1]; y<a[1]+a[3]; y++) for (int x=a[0]; x<a[0]+a[2]; x++) {
+                        int shade = ((x+y)%6==0) ? 94 : (((x*5+y*3)%7==0) ? 66 : 29)
+                        if (tier=="diamond") shade += 10
+                        if (tier=="netherite") shade -= 8
+                        g.setColor(color(Math.max(8,shade-3),Math.max(10,shade),Math.max(14,shade+10))); g.fillRect(x,y,1,1)
+                    }
+                    g.setColor(color(111,119,132)); g.drawRect(a[0],a[1],a[2]-1,a[3]-1)
+                }
+                // Red reactor channels and rivets across torso/legs.
+                g.setColor(color(95,0,6)); g.fillRect(23,7,2,9); g.fillRect(7,9,2,5); g.fillRect(45,9,2,5)
+                g.setColor(color(210,12,20)); g.fillRect(24,8,1,7); g.fillRect(7,10,1,3); g.fillRect(45,10,1,3)
+                g.setColor(color(150,155,165)); [[10,2],[22,2],[2,10],[18,10],[34,10],[42,10],[6,22],[22,22],[46,22],[54,22]].each { p -> g.fillRect(p[0],p[1],1,1) }
+                g.dispose()
+                def armorName = tier+"_layer_${layer}.png"
+                javax.imageio.ImageIO.write(im,"png",new File(armorDir,armorName))
+            }
+        }
+        new File(root,"pack.mcmeta").text = groovy.json.JsonOutput.prettyPrint(groovy.json.JsonOutput.toJson([pack:[pack_format:75,description:"T-800 Arsenal - 3D mechanical weapons and cybernetic armor"]]))
+        new File(root,"README.txt").text = """T-800 ARSENAL RESOURCE PACK
+Enable under Options > Resource Packs.
+Includes custom blocky 3D item models for iron/diamond/netherite swords, iron/diamond/netherite axes and iron/netherite pickaxes; animated red reactor texture details; and cybernetic armor layer textures.
+Minecraft's built-in item model format is used; these are low-poly voxel-style models, not a replacement rendering engine. Armor textures replace the corresponding vanilla iron/diamond/netherite armor textures while this pack is active.
+"""
+    }
+}
+processResources.dependsOn(tasks.named("generateT800GearPack"))
+processResources {
+    from(t800GearPackDir) {
+        include "resourcepacks/**"
+    }
+}
+
 processResources.dependsOn(tasks.named("generateT800ElytraPack"))
 processResources {
     from(t800ElytraPackDir) {
