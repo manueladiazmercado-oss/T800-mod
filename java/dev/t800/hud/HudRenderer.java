@@ -172,13 +172,29 @@ public class HudRenderer implements HudElement {
                 self.getBoundingBox().inflate(48.0),
                 e -> e != self && e.isAlive() && !e.isSpectator())) {
             double distance = self.distanceTo(entity);
-            if (distance > 48.0 || !self.hasLineOfSight(entity)) continue;
+            if (distance > 48.0) continue;
 
             Vec3 bottomWorld = new Vec3(entity.getX(), entity.getY(), entity.getZ());
             Vec3 topWorld = bottomWorld.add(0, entity.getBbHeight(), 0);
             Vec3 bottom = projectThermalPoint(mc, bottomWorld, w, h);
             Vec3 top = projectThermalPoint(mc, topWorld, w, h);
             if (bottom == null || top == null) continue;
+
+            boolean hostile = TargetTracker.isHostile(entity);
+            boolean player = entity instanceof Player;
+            int hot = hostile ? 0xFFFF321C : player ? 0xFFFF5B25 : 0xFFFFB52E;
+            if (!self.hasLineOfSight(entity)) {
+                // Through-wall thermal contact is intentionally a tag only: never draw a silhouette
+                // unless the entity is actually visible, and make the occluded state explicit.
+                String name = entity.getName().getString();
+                if (name.length() > 18) name = name.substring(0, 18);
+                String tag = "OCCLUDED " + name + " " + String.format(java.util.Locale.ROOT, "%.0fm", distance);
+                float tagScale = 0.48f;
+                double tagX = Mth.clamp(top.x - textW(f, tag, tagScale) / 2, 2, w - textW(f, tag, tagScale) - 2);
+                double tagY = Mth.clamp(top.y - 6, 27, h - 10);
+                text(g, f, tag, tagX, tagY, tagScale, alpha(hot, 0.95));
+                continue;
+            }
 
             double boxH = Math.abs(bottom.y - top.y);
             if (boxH < 3 || boxH > h * 1.4) continue;
@@ -189,9 +205,6 @@ public class HudRenderer implements HudElement {
             int bottomY = (int) Math.round(bottom.y);
             if (right < 0 || left > w || bottomY < 0 || topY > h) continue;
 
-            boolean hostile = TargetTracker.isHostile(entity);
-            boolean player = entity instanceof Player;
-            int hot = hostile ? 0xFFFF321C : player ? 0xFFFF5B25 : 0xFFFFB52E;
             int core = hostile ? 0xCCFF9A24 : player ? 0xBBFFB347 : 0x99FFF08A;
             // Translucent body-shaped heat mass, brighter core, hot head and bright contour.
             g.fillGradient(left, topY, right, bottomY, alpha(hot, 0.76), alpha(core, 0.30));
