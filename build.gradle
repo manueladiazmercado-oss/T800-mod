@@ -28,7 +28,6 @@ sourceSets {
 processResources {
     inputs.property "version", project.version
     filesMatching("fabric.mod.json") { expand "version": inputs.properties.version }
-    // Bundle optional built-in resource packs that are stored outside Gradle's default resource tree.
     from('resources') {
         include 'resourcepacks/**'
     }
@@ -37,9 +36,9 @@ processResources {
 tasks.withType(JavaCompile).configureEach { options.release = 21 }
 java { withSourcesJar(); sourceCompatibility = JavaVersion.VERSION_21; targetCompatibility = JavaVersion.VERSION_21 }
 
-
-// Generate the 64x32 T-800 mechanical Elytra texture as part of the build,
-// so the published JAR contains a real PNG without committing binary blobs.
+// Generate an animated 64x(32*8) elytra sprite sheet and pack metadata.
+// Each frame changes the red reactor strips, so the stock 3D elytra model gets a
+// pulsing T-800 mechanical skin without replacing Minecraft's player renderer.
 def t800ElytraPackDir = layout.buildDirectory.dir("generated/t800ElytraPack")
 tasks.register("generateT800ElytraPack") {
     outputs.dir(t800ElytraPackDir)
@@ -47,10 +46,68 @@ tasks.register("generateT800ElytraPack") {
         def packDir = new File(t800ElytraPackDir.get().asFile, "resourcepacks/t800_elytra")
         def texture = new File(packDir, "assets/minecraft/textures/entity/elytra.png")
         texture.parentFile.mkdirs()
-        texture.bytes = java.util.Base64.decoder.decode("iVBORw0KGgoAAAANSUhEUgAAAEAAAAAgCAYAAACinX6EAAAClElEQVR4nGNgGAWjYEQDRhhDRknrP7qkrKIyg4GxMYrY/Xv3Ufh3blxD4QeGhMDZRw4fQZFLSkqEs1OjgxiR5WYvXQe3f968+Sj6bGxt4Oz1a9agyKloaKHwFZUUUfgXzp5leHz/LgM6eHLvGiMDAwMDC4YMnYCwhBxGgA8EIJgCCosKqWLRxw8f4OzU6CBG9AB4++IRI3Iq4BcQoIq9/X39lKWA/QcPofDJyQL4kj4ySI0OggfCxw8f4FmBkixACGANgPOMXxkYGBgY/EgyijRwko8Vha/ygnZ2wfxj+J8bQw4eG0LisvDkd5OHiYGBgYFB/cs/qjrk3cvHcPvuqCmjZAGVW3exuoUaAJt/YG6BpwAubl4kLZAQU9cxwFoLbHfaz8DAwMDguc+RYBZAS/5wtvmn3zgd3Nk3Ec6eN28+wSyA7B5stQDDg0sYfnwHpZlwuoIKgNi8jw6Q1SKbQQtAVjXouc+R2u6gCFDiHpqlADVVVTiblNjHpgfZLGoDmmaBoQBoEgCUxj42vbRKBTStBpGrPXTwa4EGSlXHlnADp1pKq0WqV4PIAL0aLK+shLORqz1KAHK12NnejiJHTGeIbtUgmufxJn3Jim8oGB9ANgvZDmoAsgJgu9N+eONjMABK3EO1FEBK7JMDaJUKRhtC1HAArWMfm9nUSgVUrwbxVX3IANuACDH6yKkSiaoG3718zIgYFSK+GgwO9IezSYl9cscD3r18jDJytHb9RhR5YqpB2GgQA8NoUxh7ABj+58Y6eoIOyI19BgbIeAAyJgUg24XsBlwAn39QAgA5aRAClHieGoDUQIABdD+OZgFyNA107GOzm5RUgAwwGkJP7l1jxDZHQG1AbLVHTUBKFh8FIwUAAIiMLVn/pb26AAAAAElFTkSuQmCC")
-        def meta = new File(packDir, "pack.mcmeta")
+
+        def width = 64
+        def frameHeight = 32
+        def frames = 8
+        def sheet = new java.awt.image.BufferedImage(width, frameHeight * frames, java.awt.image.BufferedImage.TYPE_INT_ARGB)
+        def g = sheet.createGraphics()
+        g.setRenderingHint(java.awt.RenderingHints.KEY_ANTIALIASING, java.awt.RenderingHints.VALUE_ANTIALIAS_OFF)
+
+        for (int f = 0; f < frames; f++) {
+            int y0 = f * frameHeight
+            // Keep the vanilla elytra UV layout and transparent background.
+            // Pixel-art wing plates: charcoal steel, bevels, segmented armor, red reactor channels.
+            def poly = { int[] xs, int[] ys, java.awt.Color c ->
+                def p = new java.awt.Polygon(xs, ys, xs.length)
+                g.setColor(c); g.fillPolygon(p)
+            }
+            def c = { int r, int gg, int b, int a = 255 -> new java.awt.Color(r, gg, b, a) }
+            int pulse = [100, 145, 205, 255, 220, 170, 125, 95][f]
+            g.translate(0, y0)
+            // left and right wings, with a narrow central hinge
+            poly([2, 24, 30, 27, 20, 7] as int[], [2, 0, 5, 21, 30, 25] as int[], c(18, 21, 28))
+            poly([34, 40, 57, 62, 57, 38] as int[], [5, 0, 2, 25, 30, 21] as int[], c(18, 21, 28))
+            // plate bevels and layered armor
+            poly([4, 23, 27, 23, 8] as int[], [4, 3, 7, 19, 23] as int[], c(54, 60, 72))
+            poly([36, 41, 55, 59, 55, 39] as int[], [7, 3, 4, 23, 23, 19] as int[], c(54, 60, 72))
+            poly([7, 21, 24, 20, 10] as int[], [6, 5, 8, 17, 20] as int[], c(29, 33, 42))
+            poly([40, 43, 53, 56, 53, 40] as int[], [8, 5, 6, 20, 17, 17] as int[], c(29, 33, 42))
+            // segmented plates, deliberately chunky at Minecraft's native pixel scale
+            g.setColor(c(83, 90, 103))
+            [8, 13, 18, 23].each { int x -> g.drawLine(x, 7, x + 2, 17) }
+            [40, 45, 50, 55].each { int x -> g.drawLine(x, 7, x - 2, 17) }
+            g.setColor(c(8, 10, 14))
+            g.drawLine(6, 19, 20, 25); g.drawLine(43, 25, 58, 19)
+            // red emissive strips pulse through the animation frames
+            g.setColor(c(90, 0, 0)); g.drawLine(5, 7, 8, 22); g.drawLine(58, 7, 55, 22)
+            g.setColor(c(pulse, 8, 14)); g.drawLine(6, 7, 9, 21); g.drawLine(57, 7, 54, 21)
+            g.setColor(c(Math.min(255, pulse + 35), 35, 40)); g.drawLine(6, 8, 7, 13); g.drawLine(57, 8, 56, 13)
+            // central T-800 reactor and twin thruster marks
+            poly([28, 36, 38, 35, 29] as int[], [8, 8, 23, 27, 23] as int[], c(12, 14, 19))
+            g.setColor(c(90, 10, 15)); g.fillRect(31, 10, 2, 10)
+            g.setColor(c(pulse, 15, 20)); g.fillRect(32, 10, 1, 8)
+            g.setColor(c(100, 100, 110)); g.drawLine(28, 9, 30, 11); g.drawLine(36, 9, 34, 11)
+            g.setColor(c(pulse, 18, 18)); g.fillRect(29, 22, 2, 4); g.fillRect(34, 22, 2, 4)
+            g.setColor(c(255, Math.max(25, pulse / 4), Math.max(25, pulse / 4))); g.drawLine(29, 23, 29, 24); g.drawLine(34, 23, 34, 24)
+            g.translate(0, -y0)
+        }
+        g.dispose()
+        javax.imageio.ImageIO.write(sheet, "png", texture)
+
+        def meta = new File(packDir, "assets/minecraft/textures/entity/elytra.png.mcmeta")
         meta.parentFile.mkdirs()
-        meta.text = '{"pack":{"pack_format":75,"description":"T-800 Cybernetic Elytra"}}'
+        meta.text = groovy.json.JsonOutput.prettyPrint(groovy.json.JsonOutput.toJson([
+            animation: [frametime: 3, interpolate: false, frames: (0..7).collect { [index: it, time: 3] }]
+        ]))
+        def packMeta = new File(packDir, "pack.mcmeta")
+        packMeta.text = groovy.json.JsonOutput.prettyPrint(groovy.json.JsonOutput.toJson([
+            pack: [pack_format: 75, description: "T-800 Cybernetic Elytra - animated red reactor texture"]
+        ]))
+        new File(packDir, "README.txt").text = """T-800 CYBERNETIC ELYTRA
+This pack replaces the vanilla elytra texture with an animated charcoal-steel and red-reactor skin.
+Enable it in Options > Resource Packs. The elytra remains Minecraft's vanilla 3D model; this pack animates the emissive-looking red texture only and does not add custom wing folding geometry or jet particles.
+"""
     }
 }
 processResources.dependsOn(tasks.named("generateT800ElytraPack"))
