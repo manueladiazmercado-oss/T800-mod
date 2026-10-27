@@ -71,6 +71,7 @@ public class HudRenderer implements HudElement {
         if (Config.vignette && !Config.performanceProfile) drawVignette(g, w, h);
         if (Config.vision && !Config.performanceProfile) drawVision(g, w, h, now);
         if (Config.infraredVision && !Config.performanceProfile) drawInfrared(g, mc, w, h, now);
+        if (Config.combatAnalytics && Config.adaptiveCombatAI && !Config.performanceProfile) drawInvisibleParticleTrace(g, mc, w, h, pt, now);
         if (Config.damageFlash && !Config.performanceProfile) drawDamageFlash(g, w, h, now);
 
         t.project(mc, pt, w, h);
@@ -90,6 +91,66 @@ public class HudRenderer implements HudElement {
         if (T800HudClient.analyticsOverlayVisible && Config.combatAnalytics) drawCombatOverlay(g, mc, w, h, t);
         drawKillNotice(g, mc, t, w, h, now);
         if (Config.boot) drawBoot(g, mc, w, h, now);
+    }
+
+
+    /**
+     * Particle-signature scan for invisible players. This is a client-side visual estimate:
+     * only loaded players with the invisibility effect and a clear line of sight are candidates.
+     * The red flecks are a T-800 HUD overlay, not a replacement of Minecraft's global potion
+     * particle texture; the frame is deliberately labelled as an estimate.
+     */
+    private void drawInvisibleParticleTrace(GuiGraphics g, Minecraft mc, int w, int h, float pt, long now) {
+        if (mc.player == null || mc.level == null) return;
+        int count = 0;
+        for (Player candidate : mc.level.players()) {
+            if (candidate == mc.player || !candidate.isAlive() || candidate.isSpectator()) continue;
+            if (!candidate.hasEffect(MobEffects.INVISIBILITY)) continue;
+            double distance = candidate.distanceTo(mc.player);
+            if (distance > Math.min(32.0, Config.range())) continue;
+            // Particle traces are only meaningful when the player could visually observe them.
+            if (!mc.player.hasLineOfSight(candidate)) continue;
+            Vec3 eye = mc.player.getEyePosition(pt);
+            Vec3 point = TargetTracker.center(candidate, pt);
+            double yaw = Math.toRadians(mc.player.getViewYRot(pt));
+            double pitch = Math.toRadians(mc.player.getViewXRot(pt));
+            Vec3 forward = new Vec3(-Math.sin(yaw) * Math.cos(pitch), -Math.sin(pitch), Math.cos(yaw) * Math.cos(pitch));
+            Vec3 right = new Vec3(-Math.cos(yaw), 0, -Math.sin(yaw));
+            Vec3 up = right.cross(forward);
+            Vec3 delta = point.subtract(eye);
+            double depth = delta.dot(forward);
+            if (depth <= 0.1) continue;
+            double tan = Math.tan(Math.toRadians(mc.options.fov().get()) / 2.0);
+            double aspect = (double) w / Math.max(1, h);
+            double sx = w / 2.0 + (delta.dot(right) / depth) / (tan * aspect) * (w / 2.0);
+            double sy = h / 2.0 - (delta.dot(up) / depth) / tan * (h / 2.0);
+            if (sx < -30 || sx > w + 30 || sy < -30 || sy > h + 30) continue;
+
+            double px = Math.max(9, Math.min(70, candidate.getBbWidth() * 0.5 / depth / tan * (h / 2.0) * 1.25));
+            double py = Math.max(14, Math.min(100, candidate.getBbHeight() * 0.5 / depth / tan * (h / 2.0) * 1.2));
+            int left = (int) Math.round(sx - px), rightX = (int) Math.round(sx + px);
+            int top = (int) Math.round(sy - py), bottom = (int) Math.round(sy + py);
+            int red = 0xFFFF2638;
+            int dim = 0xAFFF2638;
+            int corner = Math.max(4, Math.min(10, (rightX - left) / 3));
+            // Broken corner brackets make it read as an uncertain thermal/particle lock.
+            g.fill(left, top, left + corner, top + 1, red); g.fill(left, top, left + 1, top + corner, red);
+            g.fill(rightX - corner, top, rightX, top + 1, red); g.fill(rightX - 1, top, rightX, top + corner, red);
+            g.fill(left, bottom - 1, left + corner, bottom, red); g.fill(left, bottom - corner, left + 1, bottom, red);
+            g.fill(rightX - corner, bottom - 1, rightX, bottom, red); g.fill(rightX - 1, bottom - corner, rightX, bottom, red);
+            // Synthetic red particle flecks show the signature being analysed.
+            long seed = candidate.getId() * 31L;
+            for (int i = 0; i < 6; i++) {
+                int fx = left + 2 + (int) Math.floorMod(seed + now / 90 + i * 17L, Math.max(3, rightX - left - 3));
+                int fy = top + 2 + (int) Math.floorMod(seed / 3 + now / 110 + i * 11L, Math.max(3, bottom - top - 3));
+                g.fill(fx, fy, fx + 2, fy + 2, dim);
+            }
+            String label = "INVIS TRACE // EST. " + Math.round(100.0 - Math.min(70.0, distance * 1.7)) + "%";
+            g.fill(left, Math.max(1, top - 11), left + mc.font.width(label) + 5, Math.max(10, top), 0xB800080D);
+            g.drawString(mc.font, label, left + 2, Math.max(2, top - 10), red, false);
+            count++;
+            if (count >= 4) break;
+        }
     }
 
     // ---------------------------------------------------------------- primitives (shared with screens)
