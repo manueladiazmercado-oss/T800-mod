@@ -45,14 +45,14 @@ public class T800HudClient implements ClientModInitializer {
         ModContainer self = FabricLoader.getInstance().getModContainer(MOD_ID).orElseThrow();
         ResourceLoader.registerBuiltinPack(Identifier.fromNamespaceAndPath(MOD_ID, "t800_gui"), self,
                 Component.literal("T-800 HUD Textures"), PackActivationType.DEFAULT_ENABLED);
-        ResourceLoader.registerBuiltinPack(Identifier.fromNamespaceAndPath(MOD_ID, "t800_food_color"), self,
-                Component.literal("T-800 Liquid Metal Food (colored)"), PackActivationType.DEFAULT_ENABLED);
         ResourceLoader.registerBuiltinPack(Identifier.fromNamespaceAndPath(MOD_ID, "t800_food_chrome"), self,
                 Component.literal("T-800 Liquid Metal Food (pure chrome)"), PackActivationType.NORMAL);
         ResourceLoader.registerBuiltinPack(Identifier.fromNamespaceAndPath(MOD_ID, "t800_elytra"), self,
                 Component.literal("T-800 Cybernetic Elytra"), PackActivationType.DEFAULT_ENABLED);
         ResourceLoader.registerBuiltinPack(Identifier.fromNamespaceAndPath(MOD_ID, "t800_crossbow"), self,
                 Component.literal("T-800 Animated Plasma Crossbow"), PackActivationType.DEFAULT_ENABLED);
+        ResourceLoader.registerBuiltinPack(Identifier.fromNamespaceAndPath(MOD_ID, "t800_arsenal"), self,
+                Component.literal("T-800 Arsenal Weapons and Armor"), PackActivationType.DEFAULT_ENABLED);
 
         KeyMapping.Category category =
                 KeyMapping.Category.register(Identifier.fromNamespaceAndPath(MOD_ID, "main"));
