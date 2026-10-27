@@ -33,6 +33,9 @@ public class GigaMapScreen extends Screen {
 
     @Override
     protected void init() {
+        addRenderableWidget(Button.builder(Component.literal("WORLD 3D"), b ->
+                Minecraft.getInstance().setScreen(new WorldRendererScreen()))
+                .bounds(Math.max(8, width - 94), 8, 86, 20).build());
         int y = height - 27;
         addRenderableWidget(Button.builder(Component.literal("ROTATE: " + (rotateWithPlayer ? "PLAYER" : "NORTH")), b -> {
             rotateWithPlayer = !rotateWithPlayer;
