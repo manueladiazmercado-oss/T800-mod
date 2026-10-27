@@ -45,7 +45,15 @@ public class SettingsScreen extends Screen {
         opts.add(new Opt("Boot Sequence", () -> onOff(Config.boot), () -> Config.boot = !Config.boot));
         opts.add(new Opt("Sounds", () -> onOff(Config.sounds), () -> Config.sounds = !Config.sounds));
         opts.add(new Opt("Termination Lock", () -> onOff(Config.terminationMode), () -> Config.terminationMode = !Config.terminationMode));
-        opts.add(new Opt("Combat Analytics", () -> onOff(Config.combatAnalytics), () -> Config.combatAnalytics = !Config.combatAnalytics));\n        opts.add(new Opt("Adaptive Combat AI", () -> onOff(Config.adaptiveCombatAI), () -> Config.adaptiveCombatAI = !Config.adaptiveCombatAI));\n        opts.add(new Opt("Multi-Target Scan", () -> onOff(Config.multiTargetAnalysis), () -> Config.multiTargetAnalysis = !Config.multiTargetAnalysis));\n        opts.add(new Opt("Combat Memory", () -> onOff(Config.combatMemory), () -> Config.combatMemory = !Config.combatMemory));\n        opts.add(new Opt("Survival Protocol", () -> onOff(Config.survivalProtocol), () -> Config.survivalProtocol = !Config.survivalProtocol));\n        opts.add(new Opt("Termination 2.0", () -> onOff(Config.terminationV2), () -> Config.terminationV2 = !Config.terminationV2));\n        opts.add(new Opt("Voice Assistant (OS TTS)", () -> onOff(Config.voiceAssistant), () -> Config.voiceAssistant = !Config.voiceAssistant));\n        opts.add(new Opt("GigaMap Combat Link", () -> onOff(Config.gigaMapCombatLink), () -> Config.gigaMapCombatLink = !Config.gigaMapCombatLink));\n        opts.add(new Opt("Self Diagnostics", () -> onOff(Config.selfDiagnostics), () -> Config.selfDiagnostics = !Config.selfDiagnostics));
+        opts.add(new Opt("Combat Analytics", () -> onOff(Config.combatAnalytics), () -> Config.combatAnalytics = !Config.combatAnalytics));
+        opts.add(new Opt("Adaptive Combat AI", () -> onOff(Config.adaptiveCombatAI), () -> Config.adaptiveCombatAI = !Config.adaptiveCombatAI));
+        opts.add(new Opt("Multi-Target Scan", () -> onOff(Config.multiTargetAnalysis), () -> Config.multiTargetAnalysis = !Config.multiTargetAnalysis));
+        opts.add(new Opt("Combat Memory", () -> onOff(Config.combatMemory), () -> Config.combatMemory = !Config.combatMemory));
+        opts.add(new Opt("Survival Protocol", () -> onOff(Config.survivalProtocol), () -> Config.survivalProtocol = !Config.survivalProtocol));
+        opts.add(new Opt("Termination 2.0", () -> onOff(Config.terminationV2), () -> Config.terminationV2 = !Config.terminationV2));
+        opts.add(new Opt("Voice Assistant (OS TTS)", () -> onOff(Config.voiceAssistant), () -> Config.voiceAssistant = !Config.voiceAssistant));
+        opts.add(new Opt("GigaMap Combat Link", () -> onOff(Config.gigaMapCombatLink), () -> Config.gigaMapCombatLink = !Config.gigaMapCombatLink));
+        opts.add(new Opt("Self Diagnostics", () -> onOff(Config.selfDiagnostics), () -> Config.selfDiagnostics = !Config.selfDiagnostics));
         opts.add(new Opt("Armor Alerts", () -> onOff(Config.armorAlerts), () -> Config.armorAlerts = !Config.armorAlerts));
         opts.add(new Opt("Terrain Layer", () -> onOff(Config.terrainLayer), () -> Config.terrainLayer = !Config.terrainLayer));
         opts.add(new Opt("Performance Profile", () -> onOff(Config.performanceProfile), () -> Config.performanceProfile = !Config.performanceProfile));
