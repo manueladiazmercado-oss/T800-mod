@@ -53,7 +53,7 @@ public final class OpponentIntelService {
             status = "NO PLAYER TARGET";
             return;
         }
-        String name = player.getGameProfile().name();
+        String name = player.getName().getString();
         if (name.equalsIgnoreCase(requestedName) && System.currentTimeMillis() - lastRequest < 60_000) return;
         requestedName = name;
         lastRequest = System.currentTimeMillis();
@@ -127,7 +127,7 @@ public final class OpponentIntelService {
         String server = mc.getCurrentServer().ip.toLowerCase(Locale.ROOT);
         if (server.contains("pvpclub") || server.contains("pvp.club")) return "PVP CLUB";
         if (server.contains("donut")) return "SMP";
-        return "AUTO / " + server;
+        return "SMP";
     }
 
     public static String advice(String mode, LivingEntity target, double distance, boolean projectileNearby) {
