@@ -22,6 +22,7 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.LightLayer;
+import net.minecraft.world.phys.Vec3;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -145,18 +146,99 @@ public class HudRenderer implements HudElement {
         g.fill(0, sweep, w, sweep + 1, alpha(rgb, 0.25));
     }
 
-    /** Lightweight thermal-style overlay; deliberately HUD-only to avoid unsafe renderer hooks. */
+    /**
+     * Thermal vision approximation rendered in screen space: warm, heat-colored silhouettes
+     * are drawn only for living entities with line of sight, so this does not reveal entities
+     * through walls. Minecraft does not expose physical temperatures for ordinary entities;
+     * colors represent estimated biological/hostile heat, not measured temperatures.
+     */
     private void drawInfrared(GuiGraphics g, Minecraft mc, int w, int h, long now) {
-        g.fill(0, 0, w, h, alpha(0x16251B, 0.28));
-        for (int y = 0; y < h; y += 4) g.fill(0, y, w, y + 1, 0x1800FF88);
-        int sweep = (int) ((now / 14) % (h + 80)) - 40;
-        g.fillGradient(0, sweep - 24, w, sweep, 0x0000FF00, 0x5530FF80);
-        g.fill(0, sweep, w, sweep + 1, 0xAA60FFB0);
+        // Warm, low-opacity palette filter and scanline texture.
+        g.fill(0, 0, w, h, alpha(0x3B170D, 0.34));
+        for (int y = 0; y < h; y += 5) g.fill(0, y, w, y + 1, 0x1800D9FF);
+        int sweep = (int) ((now / 13) % (h + 80)) - 40;
+        g.fillGradient(0, sweep - 28, w, sweep, 0x00FF3A00, 0x44FF5A00);
+        g.fill(0, sweep, w, sweep + 1, 0x99FF7A20);
+
         Font f = mc.font;
-        String label = "THERMAL / IR SENSOR ACTIVE";
-        text(g, f, label, w / 2.0 - textW(f, label, 0.65f) / 2, 8, 0.65f, 0xFF70FFB0);
-        String light = String.format("LUX %d", mc.level.getBrightness(LightLayer.BLOCK, mc.player.blockPosition()));
-        text(g, f, light, w - textW(f, light, 0.5f) - 8, 8, 0.5f, 0xFF70FFB0);
+        String label = "T-800 THERMAL IMAGING // LIVE";
+        text(g, f, label, w / 2.0 - textW(f, label, 0.65f) / 2, 8, 0.65f, 0xFFFFB04A);
+        String range = "VISIBLE HEAT SIGNATURES";
+        text(g, f, range, w / 2.0 - textW(f, range, 0.45f) / 2, 17, 0.45f, 0xFFFF7040);
+
+        if (mc.player == null || mc.level == null) return;
+        LocalPlayer self = mc.player;
+        for (LivingEntity entity : mc.level.getEntitiesOfClass(LivingEntity.class,
+                self.getBoundingBox().inflate(48.0),
+                e -> e != self && e.isAlive() && !e.isSpectator())) {
+            double distance = self.distanceTo(entity);
+            if (distance > 48.0 || !self.hasLineOfSight(entity)) continue;
+
+            Vec3 bottomWorld = new Vec3(entity.getX(), entity.getY(), entity.getZ());
+            Vec3 topWorld = bottomWorld.add(0, entity.getBbHeight(), 0);
+            Vec3 bottom = projectThermalPoint(mc, bottomWorld, w, h);
+            Vec3 top = projectThermalPoint(mc, topWorld, w, h);
+            if (bottom == null || top == null) continue;
+
+            double boxH = Math.abs(bottom.y - top.y);
+            if (boxH < 3 || boxH > h * 1.4) continue;
+            double boxW = Mth.clamp(boxH * entity.getBbWidth() / Math.max(0.1, entity.getBbHeight()), 3, 48);
+            int left = (int) Math.round(top.x - boxW * 0.5);
+            int right = (int) Math.round(top.x + boxW * 0.5);
+            int topY = (int) Math.round(top.y);
+            int bottomY = (int) Math.round(bottom.y);
+            if (right < 0 || left > w || bottomY < 0 || topY > h) continue;
+
+            boolean hostile = TargetTracker.isHostile(entity);
+            boolean player = entity instanceof Player;
+            int hot = hostile ? 0xFFFF321C : player ? 0xFFFF5B25 : 0xFFFFB52E;
+            int core = hostile ? 0xCCFF9A24 : player ? 0xBBFFB347 : 0x99FFF08A;
+            // Translucent body-shaped heat mass, brighter core, hot head and bright contour.
+            g.fillGradient(left, topY, right, bottomY, alpha(hot, 0.76), alpha(core, 0.30));
+            int coreW = Math.max(1, (int) (boxW * 0.30));
+            g.fillGradient((left + right - coreW) / 2, topY + (int) (boxH * 0.18),
+                    (left + right + coreW) / 2, bottomY - (int) (boxH * 0.08),
+                    alpha(0xFFFFE7A0, 0.55), alpha(hot, 0.05));
+            int head = Math.max(2, (int) (boxW * 0.58));
+            int headX = (left + right - head) / 2;
+            int headY = topY - Math.max(0, (int) (boxH * 0.02));
+            g.fill(headX, headY, headX + head, headY + Math.max(2, head), alpha(0xFFFFD66B, 0.88));
+            int edge = alpha(hot, 0.95);
+            g.fill(left, topY, right, topY + 1, edge);
+            g.fill(left, bottomY - 1, right, bottomY, edge);
+            g.fill(left, topY, left + 1, bottomY, edge);
+            g.fill(right - 1, topY, right, bottomY, edge);
+
+            String kind = hostile ? "HOT" : player ? "HUMAN" : "LIFE";
+            String tag = kind + " " + String.format(java.util.Locale.ROOT, "%.0fm", distance);
+            float scale = 0.48f;
+            double labelX = Mth.clamp((left + right) / 2.0 - textW(f, tag, scale) / 2, 2, w - textW(f, tag, scale) - 2);
+            double labelY = Math.max(27, topY - 6);
+            text(g, f, tag, labelX, labelY, scale, hot);
+        }
+        String light = String.format(java.util.Locale.ROOT, "LUX %d", mc.level.getBrightness(LightLayer.BLOCK, self.blockPosition()));
+        text(g, f, light, w - textW(f, light, 0.5f) - 8, 8, 0.5f, 0xFFFFB04A);
+    }
+
+    /** Projects a world-space point using the active first-person camera orientation. */
+    private static Vec3 projectThermalPoint(Minecraft mc, Vec3 point, int w, int h) {
+        LocalPlayer p = mc.player;
+        if (p == null) return null;
+        Vec3 eye = p.getEyePosition(1.0f);
+        double yaw = Math.toRadians(p.getViewYRot(1.0f));
+        double pitch = Math.toRadians(p.getViewXRot(1.0f));
+        Vec3 forward = new Vec3(-Math.sin(yaw) * Math.cos(pitch), -Math.sin(pitch), Math.cos(yaw) * Math.cos(pitch));
+        Vec3 right = new Vec3(-Math.cos(yaw), 0, -Math.sin(yaw));
+        Vec3 up = right.cross(forward);
+        Vec3 d = point.subtract(eye);
+        double depth = d.dot(forward);
+        if (depth <= 0.1) return null;
+        double tanHalf = Math.tan(Math.toRadians(mc.options.fov().get()) / 2.0);
+        double aspect = (double) w / Math.max(1, h);
+        double sx = w / 2.0 + (d.dot(right) / depth) / (tanHalf * aspect) * (w / 2.0);
+        double sy = h / 2.0 - (d.dot(up) / depth) / tanHalf * (h / 2.0);
+        if (!Double.isFinite(sx) || !Double.isFinite(sy)) return null;
+        return new Vec3(sx, sy, depth);
     }
 
     private void updateDamage(LocalPlayer p, long now) {
