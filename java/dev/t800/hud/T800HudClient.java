@@ -24,7 +24,7 @@ public class T800HudClient implements ClientModInitializer {
     public static final TargetTracker TRACKER = new TargetTracker();
 
     private static KeyMapping toggleKey, modeKey, visionKey, nightKey, armorKey, settingsKey,
-            analyticsKey, gigaMapKey, terminationKey, performanceKey, infraredKey;
+            analyticsKey, gigaMapKey, terminationKey, performanceKey, infraredKey, voiceKey, confirmActionKey, cancelActionKey;\n    private static boolean voiceWasDown;
     private static boolean nvApplied;
     private static boolean deathRecorded;
     /** F4 toggles the combat-analysis overlay without opening a separate screen. */
@@ -63,7 +63,7 @@ public class T800HudClient implements ClientModInitializer {
         gigaMapKey = reg("key.t800hud.gigamap", GLFW.GLFW_KEY_F6, category);
         terminationKey = reg("key.t800hud.termination", GLFW.GLFW_KEY_F8, category);
         performanceKey = reg("key.t800hud.performance", GLFW.GLFW_KEY_F9, category);
-        infraredKey = reg("key.t800hud.infrared", GLFW.GLFW_KEY_I, category);
+        infraredKey = reg("key.t800hud.infrared", GLFW.GLFW_KEY_I, category);\n        voiceKey = reg("key.t800hud.voice", GLFW.GLFW_KEY_F10, category);\n        confirmActionKey = reg("key.t800hud.voice_confirm", GLFW.GLFW_KEY_F11, category);\n        cancelActionKey = reg("key.t800hud.voice_cancel", GLFW.GLFW_KEY_F12, category);
 
         ClientTickEvents.END_CLIENT_TICK.register(mc -> {
             boolean dirty = false;
@@ -77,7 +77,7 @@ public class T800HudClient implements ClientModInitializer {
             while (gigaMapKey.consumeClick()) { if (mc.screen == null && mc.player != null) mc.setScreen(new GigaMapScreen()); }
             while (terminationKey.consumeClick()) { Config.terminationMode = !Config.terminationMode; dirty = true; }
             while (performanceKey.consumeClick()) { Config.performanceProfile = !Config.performanceProfile; dirty = true; }
-            while (infraredKey.consumeClick()) { Config.infraredVision = !Config.infraredVision; dirty = true; }
+            while (infraredKey.consumeClick()) { Config.infraredVision = !Config.infraredVision; dirty = true; }\n            boolean voiceDown = voiceKey.isDown() && mc.screen == null;\n            if (voiceDown && !voiceWasDown) VoiceAssistantService.INSTANCE.startRecording(mc);\n            if (!voiceDown && voiceWasDown) VoiceAssistantService.INSTANCE.stopRecording(mc);\n            voiceWasDown = voiceDown;\n            while (confirmActionKey.consumeClick()) VoiceAssistantService.INSTANCE.confirm(mc);\n            while (cancelActionKey.consumeClick()) VoiceAssistantService.INSTANCE.cancel(mc);
             if (dirty) Config.save();
 
             tickNightVision(mc);
