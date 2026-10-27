@@ -237,6 +237,40 @@ processResources {
     }
 }
 
+// Generate animated T-800 crossbow skins; vanilla crossbow draw timing and projectile physics stay intact.
+def t800CrossbowPackDir = layout.buildDirectory.dir("generated/t800CrossbowPack")
+tasks.register("generateT800CrossbowPack") {
+ outputs.dir(t800CrossbowPackDir)
+ doLast {
+  def root = new File(t800CrossbowPackDir.get().asFile, "resourcepacks/t800_crossbow")
+  def itemDir = new File(root, "assets/minecraft/textures/item"); itemDir.mkdirs()
+  ["crossbow", "crossbow_pulling_0", "crossbow_pulling_1", "crossbow_pulling_2"].eachWithIndex { String variant, int vi ->
+   def sheet = new java.awt.image.BufferedImage(32, 256, java.awt.image.BufferedImage.TYPE_INT_ARGB)
+   for (int fr=0; fr<8; fr++) {
+    def g = sheet.createGraphics(); g.setRenderingHint(java.awt.RenderingHints.KEY_ANTIALIASING, java.awt.RenderingHints.VALUE_ANTIALIAS_OFF); g.translate(0, fr*32)
+    def col = { int r, int gg, int bb -> new java.awt.Color(r,gg,bb,255) }
+    int pulse = [115,145,185,230,255,220,165,125][fr]
+    g.setColor(col(12,15,20)); g.fillRect(12,4,8,23); g.setColor(col(43,49,59)); g.fillRect(13,5,6,20)
+    g.setColor(col(91,101,114)); g.fillRect(13,6,1,17); g.fillRect(18,7,1,15); g.setColor(col(19,22,29)); g.fillRect(10,9,12,5)
+    int tension = vi==0 ? 0 : (vi==1 ? 1 : (vi==2 ? 2 : 3))
+    g.setColor(col(22,26,34)); g.fillRect(4,6-tension,7,3); g.fillRect(21,6-tension,7,3); g.fillRect(3,7-tension,3,17+tension*2); g.fillRect(26,7-tension,3,17+tension*2)
+    g.setColor(col(82,91,105)); g.drawLine(4,8-tension,10,8-tension); g.drawLine(22,8-tension,28,8-tension); g.drawLine(4,22+tension,10,22+tension); g.drawLine(22,22+tension,28,22+tension)
+    g.setColor(col(78,0,8)); g.fillRect(14,9,4,11); g.setColor(col(pulse,6,15)); g.fillRect(15,10,2,9); g.setColor(col(255,Math.min(95,20+fr*9),30)); g.fillRect(15,12,1,5)
+    g.setColor(col(130,139,151)); [[12,7],[19,7],[12,21],[19,21],[6,10],[25,10],[6,19],[25,19]].each { p -> g.fillRect(p[0],p[1],1,1) }
+    g.setColor(col(160,8,15)); g.fillRect(13,23,6,2); g.setColor(col(235,20,28)); g.drawLine(14,23,17,23)
+    if (vi==2) { g.setColor(col(255,45,30)); g.fillRect(15,4,2,2) }; if (vi==3) { g.setColor(col(255,65,35)); g.fillRect(14,3,4,3); g.setColor(col(255,190,100)); g.fillRect(15,4,2,1) }
+    g.translate(0,-fr*32); g.dispose()
+   }
+   javax.imageio.ImageIO.write(sheet, "png", new File(itemDir, variant + ".png"))
+   new File(itemDir, variant + ".png.mcmeta").text = groovy.json.JsonOutput.prettyPrint(groovy.json.JsonOutput.toJson([animation:[frametime:2, interpolate:false, frames:(0..7).collect { [index:it, time:2] }]]))
+  }
+  new File(root, "pack.mcmeta").text = groovy.json.JsonOutput.prettyPrint(groovy.json.JsonOutput.toJson([pack:[pack_format:75, description:"T-800 Animated Plasma Crossbow"]]))
+  new File(root, "README.txt").text = "Animated charcoal-steel crossbow textures with pulsing red plasma chamber and drawn/loaded variants. Vanilla crossbow timing and projectile physics remain unchanged. A spherical red projectile with arrow physics requires a custom projectile renderer/entity; a resource pack alone cannot do that, and this pack does not recolor all arrows globally."
+ }
+}
+processResources.dependsOn(tasks.named("generateT800CrossbowPack"))
+processResources { from(t800CrossbowPackDir) { include "resourcepacks/**" } }
+
 processResources.dependsOn(tasks.named("generateT800ElytraPack"))
 processResources {
     from(t800ElytraPackDir) {
