@@ -89,6 +89,7 @@ public class HudRenderer implements HudElement {
             else if (t.behindOrOff) drawEdgeHint(g, mc, t, w, h, now);
         }
         if (T800HudClient.analyticsOverlayVisible && Config.combatAnalytics) drawCombatOverlay(g, mc, w, h, t);
+        if (Config.hud && !mc.options.hideGui) drawHotbarFrame(g, mc, w, h, now);
         drawKillNotice(g, mc, t, w, h, now);
         if (Config.boot) drawBoot(g, mc, w, h, now);
     }
@@ -150,6 +151,42 @@ public class HudRenderer implements HudElement {
             g.drawString(mc.font, label, left + 2, Math.max(2, top - 10), red, false);
             count++;
             if (count >= 4) break;
+        }
+    }
+
+
+    // ---------------------------------------------------------------- T-800 hotbar frame (vanilla slots/items remain untouched)
+    private void drawHotbarFrame(GuiGraphics g, Minecraft mc, int w, int h, long now) {
+        if (mc.player == null || mc.player.isSpectator()) return;
+        int left = w / 2 - 91;
+        int top = h - 22;
+        int main = Config.main();
+        int dim = Config.dim();
+        // Thin outer frame around vanilla hotbar.
+        g.fill(left - 2, top - 2, left + 182, top - 1, dim);
+        g.fill(left - 2, top + 21, left + 182, top + 22, dim);
+        g.fill(left - 2, top - 2, left - 1, top + 22, dim);
+        g.fill(left + 181, top - 2, left + 182, top + 22, dim);
+        // Per-slot corner markers, avoiding item sprites, stack counts and durability bars.
+        int selected = mc.player.getInventory().getSelectedSlot();
+        for (int i = 0; i < 9; i++) {
+            int x = left + i * 20;
+            int col = i == selected ? main : alpha(main, 0.48);
+            int len = i == selected ? 5 : 3;
+            g.fill(x, top, x + len, top + 1, col);
+            g.fill(x, top, x + 1, top + len, col);
+            g.fill(x + 16, top, x + 20, top + 1, col);
+            g.fill(x + 19, top, x + 20, top + len, col);
+            g.fill(x, top + 19, x + len, top + 20, col);
+            g.fill(x, top + 16, x + 1, top + 20, col);
+            g.fill(x + 16, top + 19, x + 20, top + 20, col);
+            g.fill(x + 19, top + 16, x + 20, top + 20, col);
+        }
+        // Selection pulse is confined to the frame so it never covers the held item.
+        if ((now / 350) % 2 == 0) {
+            int sx = left + selected * 20;
+            g.fill(sx - 1, top - 1, sx + 21, top, main);
+            g.fill(sx - 1, top + 20, sx + 21, top + 21, main);
         }
     }
 
