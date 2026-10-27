@@ -237,36 +237,64 @@ processResources {
     }
 }
 
-// Generate animated T-800 crossbow skins; vanilla crossbow draw timing and projectile physics stay intact.
+// Generate an animated, mechanically detailed T-800 crossbow pack using vanilla item texture paths.
+// Texture frames pulse the reactor; vanilla pull-state models still control the draw/release animation.
 def t800CrossbowPackDir = layout.buildDirectory.dir("generated/t800CrossbowPack")
 tasks.register("generateT800CrossbowPack") {
- outputs.dir(t800CrossbowPackDir)
- doLast {
-  def root = new File(t800CrossbowPackDir.get().asFile, "resourcepacks/t800_crossbow")
-  def itemDir = new File(root, "assets/minecraft/textures/item"); itemDir.mkdirs()
-  ["crossbow", "crossbow_pulling_0", "crossbow_pulling_1", "crossbow_pulling_2"].eachWithIndex { String variant, int vi ->
-   def sheet = new java.awt.image.BufferedImage(32, 256, java.awt.image.BufferedImage.TYPE_INT_ARGB)
-   for (int fr=0; fr<8; fr++) {
-    def g = sheet.createGraphics(); g.setRenderingHint(java.awt.RenderingHints.KEY_ANTIALIASING, java.awt.RenderingHints.VALUE_ANTIALIAS_OFF); g.translate(0, fr*32)
-    def col = { int r, int gg, int bb -> new java.awt.Color(r,gg,bb,255) }
-    int pulse = [115,145,185,230,255,220,165,125][fr]
-    g.setColor(col(12,15,20)); g.fillRect(12,4,8,23); g.setColor(col(43,49,59)); g.fillRect(13,5,6,20)
-    g.setColor(col(91,101,114)); g.fillRect(13,6,1,17); g.fillRect(18,7,1,15); g.setColor(col(19,22,29)); g.fillRect(10,9,12,5)
-    int tension = vi==0 ? 0 : (vi==1 ? 1 : (vi==2 ? 2 : 3))
-    g.setColor(col(22,26,34)); g.fillRect(4,6-tension,7,3); g.fillRect(21,6-tension,7,3); g.fillRect(3,7-tension,3,17+tension*2); g.fillRect(26,7-tension,3,17+tension*2)
-    g.setColor(col(82,91,105)); g.drawLine(4,8-tension,10,8-tension); g.drawLine(22,8-tension,28,8-tension); g.drawLine(4,22+tension,10,22+tension); g.drawLine(22,22+tension,28,22+tension)
-    g.setColor(col(78,0,8)); g.fillRect(14,9,4,11); g.setColor(col(pulse,6,15)); g.fillRect(15,10,2,9); g.setColor(col(255,Math.min(95,20+fr*9),30)); g.fillRect(15,12,1,5)
-    g.setColor(col(130,139,151)); [[12,7],[19,7],[12,21],[19,21],[6,10],[25,10],[6,19],[25,19]].each { p -> g.fillRect(p[0],p[1],1,1) }
-    g.setColor(col(160,8,15)); g.fillRect(13,23,6,2); g.setColor(col(235,20,28)); g.drawLine(14,23,17,23)
-    if (vi==2) { g.setColor(col(255,45,30)); g.fillRect(15,4,2,2) }; if (vi==3) { g.setColor(col(255,65,35)); g.fillRect(14,3,4,3); g.setColor(col(255,190,100)); g.fillRect(15,4,2,1) }
-    g.translate(0,-fr*32); g.dispose()
-   }
-   javax.imageio.ImageIO.write(sheet, "png", new File(itemDir, variant + ".png"))
-   new File(itemDir, variant + ".png.mcmeta").text = groovy.json.JsonOutput.prettyPrint(groovy.json.JsonOutput.toJson([animation:[frametime:2, interpolate:false, frames:(0..7).collect { [index:it, time:2] }]]))
-  }
-  new File(root, "pack.mcmeta").text = groovy.json.JsonOutput.prettyPrint(groovy.json.JsonOutput.toJson([pack:[pack_format:75, description:"T-800 Animated Plasma Crossbow"]]))
-  new File(root, "README.txt").text = "Animated charcoal-steel crossbow textures with pulsing red plasma chamber and drawn/loaded variants. Vanilla crossbow timing and projectile physics remain unchanged. A spherical red projectile with arrow physics requires a custom projectile renderer/entity; a resource pack alone cannot do that, and this pack does not recolor all arrows globally."
- }
+    outputs.dir(t800CrossbowPackDir)
+    doLast {
+        def root = new File(t800CrossbowPackDir.get().asFile, "resourcepacks/t800_crossbow")
+        def itemDir = new File(root, "assets/minecraft/textures/item"); itemDir.mkdirs()
+        ["crossbow_standby", "crossbow_pulling_0", "crossbow_pulling_1", "crossbow_pulling_2"].eachWithIndex { String variant, int vi ->
+            def sheet = new java.awt.image.BufferedImage(32, 256, java.awt.image.BufferedImage.TYPE_INT_ARGB)
+            for (int fr=0; fr<8; fr++) {
+                def g = sheet.createGraphics()
+                g.setRenderingHint(java.awt.RenderingHints.KEY_ANTIALIASING, java.awt.RenderingHints.VALUE_ANTIALIAS_OFF)
+                g.translate(0, fr*32)
+                def c = { int r,int gg,int b -> new java.awt.Color(r,gg,b,255) }
+                int pulse = [95,125,175,225,255,235,180,120][fr]
+                int tension = vi==0 ? 0 : (vi==1 ? 1 : (vi==2 ? 2 : 3))
+                // Stock, spine and bevels.
+                g.setColor(c(8,10,14)); g.fillRect(11,4,10,24)
+                g.setColor(c(25,30,39)); g.fillRect(12,5,8,22)
+                g.setColor(c(94,105,119)); g.fillRect(12,6,1,18); g.fillRect(19,7,1,17)
+                g.setColor(c(51,59,71)); g.fillRect(13,5,6,2); g.fillRect(13,24,6,2)
+                g.setColor(c(13,16,22)); g.fillRect(9,9,14,6); g.setColor(c(72,82,97)); g.fillRect(10,10,12,2)
+                // Twin articulated limbs and metal rails; draw state tightens the silhouette.
+                g.setColor(c(14,17,23)); g.fillRect(3,6-tension,8,4); g.fillRect(21,6-tension,8,4)
+                g.fillRect(3,8-tension,3,16+tension*2); g.fillRect(26,8-tension,3,16+tension*2)
+                g.setColor(c(66,77,92)); g.drawLine(4,8-tension,10,8-tension); g.drawLine(22,8-tension,28,8-tension)
+                g.drawLine(4,22+tension,10,22+tension); g.drawLine(22,22+tension,28,22+tension)
+                g.setColor(c(120,130,144)); g.drawLine(5,10-tension,5,20+tension); g.drawLine(27,10-tension,27,20+tension)
+                // Reactor glass, animated core, containment rings and side vents.
+                g.setColor(c(55,0,7)); g.fillRect(14,9,4,12)
+                g.setColor(c(pulse,4,14)); g.fillRect(15,10,2,10)
+                g.setColor(c(255,Math.min(115,18+fr*12),35)); g.fillRect(15,12,1,6)
+                g.setColor(c(125,7,15)); g.drawRect(13,8,5,13)
+                g.setColor(c(91,101,116)); g.fillRect(10,12,2,1); g.fillRect(20,12,2,1); g.fillRect(10,16,2,1); g.fillRect(20,16,2,1)
+                // Rivets, warning stripes and rear power cell.
+                g.setColor(c(145,155,169)); [[12,7],[19,7],[12,22],[19,22],[6,10],[25,10],[6,20],[25,20]].each { p -> g.fillRect(p[0],p[1],1,1) }
+                g.setColor(c(100,5,12)); g.fillRect(13,24,6,2); g.setColor(c(220,14,24)); g.drawLine(14,24,17,24)
+                g.setColor(c(36,42,51)); g.fillRect(8,13,2,3); g.fillRect(22,13,2,3)
+                if (fr==3 || fr==4) { g.setColor(c(255,48,28)); g.fillRect(15,4,2,2) }
+                if (fr==4) { g.setColor(c(255,180,95)); g.fillRect(15,3,2,1); g.setColor(c(255,35,25)); g.drawLine(11,5,12,6); g.drawLine(19,6,20,5) }
+                g.translate(0,-fr*32); g.dispose()
+            }
+            def f = new File(itemDir, variant + ".png")
+            javax.imageio.ImageIO.write(sheet, "png", f)
+            new File(itemDir, variant + ".png.mcmeta").text = groovy.json.JsonOutput.prettyPrint(groovy.json.JsonOutput.toJson([animation:[frametime:2, interpolate:false, frames:(0..7).collect { [index:it, time:2] }]]))
+        }
+        // Texture used by the crossbow item model for the loaded arrow/bolt indicator.
+        def bolt = new java.awt.image.BufferedImage(16,16,java.awt.image.BufferedImage.TYPE_INT_ARGB)
+        def bg = bolt.createGraphics(); bg.setRenderingHint(java.awt.RenderingHints.KEY_ANTIALIASING, java.awt.RenderingHints.VALUE_ANTIALIAS_OFF)
+        bg.setColor(new java.awt.Color(24,28,36,255)); bg.fillRect(7,1,2,14)
+        bg.setColor(new java.awt.Color(125,135,150,255)); bg.fillRect(6,3,4,2); bg.fillRect(6,11,4,2)
+        bg.setColor(new java.awt.Color(205,10,22,255)); bg.fillRect(7,4,2,7)
+        bg.setColor(new java.awt.Color(255,70,40,255)); bg.fillRect(7,6,1,3)
+        bg.dispose(); javax.imageio.ImageIO.write(bolt,"png",new File(itemDir,"crossbow_arrow.png"))
+        new File(root, "pack.mcmeta").text = groovy.json.JsonOutput.prettyPrint(groovy.json.JsonOutput.toJson([pack:[pack_format:75, description:"T-800 Animated Plasma Crossbow - reinforced limbs and pulsing reactor"]]))
+        new File(root, "README.txt").text = "T-800 ANIMATED PLASMA CROSSBOW. Correct vanilla crossbow texture paths are used: crossbow_standby and crossbow_pulling_0/1/2. Animated 8-frame reactor pulse, metal bevels, mechanical limbs, rivets and warning accents. Vanilla draw/release timing and projectile physics are unchanged. The red bolt icon is only the loaded crossbow indicator, not the flying projectile; a spherical projectile requires a custom renderer/entity."
+    }
 }
 processResources.dependsOn(tasks.named("generateT800CrossbowPack"))
 processResources { from(t800CrossbowPackDir) { include "resourcepacks/**" } }
