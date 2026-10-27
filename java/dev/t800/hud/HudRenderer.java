@@ -614,9 +614,9 @@ public class HudRenderer implements HudElement {
                 String.format("ARMOR CONDITION %d%%", armorDurability),
                 String.format("OBSERVED DPS %.1f", tracker.estimatedDps),
                 String.format("THREAT %02.0f/100  %s", targetScore, rank),
-                String.format("TERMINATION EST. %02.0f%%", termChance),
+                String.format(Config.terminationV2 ? "TERM. EST. 2.0 %02.0f%%" : "TERM. BASIC %02.0f%%", termChance),
                 "OUTLOOK " + chanceLabel,
-                "ESTIMATE: HP / ARMOR / WEAPON / RANGE",
+                Config.terminationV2 ? "ESTIMATE: HP / GEAR / FOOD / RANGE" : "BASIC HEURISTIC — NOT A WIN ODDS",
                 Config.adaptiveCombatAI ? "TACTIC " + ai.advice() : "TACTIC MODULE OFF",
                 Config.combatMemory ? "MEMORY " + ai.memory(target) : "MEMORY MODULE OFF",
                 Config.survivalProtocol ? String.format("SELF HP %.0f%% ARM %d", self.getHealth() * 100.0 / Math.max(1, self.getMaxHealth()), self.getArmorValue()) : "SURVIVAL MODULE OFF",
@@ -664,6 +664,14 @@ public class HudRenderer implements HudElement {
                                             double targetAttack, double targetToughness, double distance) {
         double playerPower = self.getHealth() * 1.5 + self.getArmorValue() * 1.4
                 + playerToughness + playerAttack * 3.0 + (weaponThreat(self) * 8.0);
+        if (Config.terminationV2) {
+            // Transparent heuristic adjustments: this is a tactical index, not a true probability.
+            playerPower += armorDurabilityPercent(self) * 0.06;
+            playerPower += self.getFoodData().getFoodLevel() * 0.35;
+            playerPower += self.getAbsorptionAmount() * 0.8;
+            if (self.hasEffect(MobEffects.STRENGTH)) playerPower += 5;
+            if (self.hasEffect(MobEffects.WEAKNESS)) playerPower -= 5;
+        }
         double targetPower = target.getHealth() * 0.4 + target.getArmorValue() * 1.4
                 + targetToughness + targetAttack * 4.0 + (weaponThreat(target) * 5.0);
         String id = target.getType().toString().toLowerCase(java.util.Locale.ROOT);
