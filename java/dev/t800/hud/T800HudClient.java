@@ -67,7 +67,8 @@ public class T800HudClient implements ClientModInitializer {
         infraredKey = reg("key.t800hud.infrared", GLFW.GLFW_KEY_I, category);
         voiceKey = reg("key.t800hud.voice", GLFW.GLFW_KEY_F10, category);
         confirmActionKey = reg("key.t800hud.voice_confirm", GLFW.GLFW_KEY_F11, category);
-        cancelActionKey = reg("key.t800hud.voice_cancel", GLFW.GLFW_KEY_F12, category);\n        pvpModeKey = reg("key.t800hud.pvp_mode", GLFW.GLFW_KEY_F7, category);
+        cancelActionKey = reg("key.t800hud.voice_cancel", GLFW.GLFW_KEY_F12, category);
+        pvpModeKey = reg("key.t800hud.pvp_mode", GLFW.GLFW_KEY_F7, category);
 
         ClientTickEvents.END_CLIENT_TICK.register(mc -> {
             boolean dirty = false;
@@ -87,7 +88,14 @@ public class T800HudClient implements ClientModInitializer {
             if (!voiceDown && voiceWasDown) VoiceAssistantService.INSTANCE.stopRecording(mc);
             voiceWasDown = voiceDown;
             while (confirmActionKey.consumeClick()) VoiceAssistantService.INSTANCE.confirm(mc);
-            while (cancelActionKey.consumeClick()) VoiceAssistantService.INSTANCE.cancel(mc);\n            while (pvpModeKey.consumeClick()) {\n                String[] modes = {"AUTO", "SMP", "CRYSTAL", "SWORD", "AXE", "POT", "UHC", "PVP CLUB"};\n                int next = 0;\n                for (int i = 0; i < modes.length; i++) if (modes[i].equalsIgnoreCase(Config.pvpMode)) next = (i + 1) % modes.length;\n                Config.pvpMode = modes[next]; Config.save();\n                if (mc.player != null) mc.player.displayClientMessage(Component.literal("T-800 PvP profile: " + Config.pvpMode), true);\n            }
+            while (cancelActionKey.consumeClick()) VoiceAssistantService.INSTANCE.cancel(mc);
+            while (pvpModeKey.consumeClick()) {
+                String[] modes = {"AUTO", "SMP", "CRYSTAL", "SWORD", "AXE", "POT", "UHC", "PVP CLUB"};
+                int next = 0;
+                for (int i = 0; i < modes.length; i++) if (modes[i].equalsIgnoreCase(Config.pvpMode)) next = (i + 1) % modes.length;
+                Config.pvpMode = modes[next]; Config.save();
+                if (mc.player != null) mc.player.displayClientMessage(Component.literal("T-800 PvP profile: " + Config.pvpMode), true);
+            }
             if (dirty) Config.save();
 
             tickNightVision(mc);
