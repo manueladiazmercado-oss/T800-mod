@@ -512,15 +512,10 @@ public class HudRenderer implements HudElement {
         String name = e.getName().getString();
         if (name.length() > 18) name = name.substring(0, 18);
 
-        // Local heuristic combat analysis: a transparent estimate, not a learned AI model.
-        double healthRatio = Mth.clamp(e.getHealth() / Math.max(1.0f, e.getMaxHealth()), 0, 1);
-        double armorScore = Mth.clamp(e.getArmorValue() / 20.0, 0, 1);
-        double weaponScore = weaponThreat(e);
-        double mobilityScore = Mth.clamp(spd / 6.0, 0, 1);
-        double combatScore = Mth.clamp(healthRatio * 35 + armorScore * 25 + weaponScore * 25
-                + mobilityScore * 15 + (hostile ? 8 : player ? 12 : 0), 0, 100);
-        String rating = combatScore >= 75 ? "EXTREME" : combatScore >= 55 ? "HIGH"
-                : combatScore >= 30 ? "MODERATE" : "LOW";
+        // Same damage/health/armor/boss-aware score as the left-side combat overlay.
+        double combatScore = combatScore(e, dist);
+        String rating = combatScore >= 80 ? "EXTREME" : combatScore >= 60 ? "HIGH"
+                : combatScore >= 35 ? "MODERATE" : "LOW";
         String tactic = dist < 4 && combatScore >= 55 ? "KEEP DISTANCE"
                 : e.getHealth() < e.getMaxHealth() * 0.25f ? "TARGET WEAK"
                 : spd > 5 ? "FAST MOVING" : "TRACK TARGET";
