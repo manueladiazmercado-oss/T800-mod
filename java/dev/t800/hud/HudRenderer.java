@@ -496,63 +496,75 @@ public class HudRenderer implements HudElement {
         }
     }
 
-    // ---------------------------------------------------------------- custom health / armor / hunger bars
+    // ---------------------------------------------------------------- T-800 survival systems: segmented health, armor, power, oxygen
     private void drawBars(GuiGraphics g, Minecraft mc, int w, int h, long now) {
         LocalPlayer p = mc.player;
         Font f = mc.font;
         double cx = w / 2.0, barW = 81, barH = 5, y = h - 31;
         double lx = cx - 91, rx = cx + 10;
-        int bg = 0x99000000 | Config.shadeRgb(0.22);
+        int bg = 0xCC05090F;
         boolean blink = (now / 250) % 2 == 0;
 
-        // ---- health (left)
-        float hp = p.getHealth(), max = p.getMaxHealth(), abs = p.getAbsorptionAmount();
-        int hcol = Config.main();
+        // Compact metal backing plates with corner highlights.
+        g.fill((int) lx - 4, (int) y - 12, (int) (lx + barW) + 3, (int) y + 7, 0xA609111A);
+        g.fill((int) rx - 3, (int) y - 12, (int) (rx + barW) + 4, (int) y + 7, 0xA609111A);
+        g.fill((int) lx - 4, (int) y - 12, (int) (lx + barW) + 3, (int) y - 11, 0xAA9BAFBE);
+        g.fill((int) rx - 3, (int) y - 12, (int) (rx + barW) + 4, (int) y - 11, 0xAA9BAFBE);
+
+        // HEALTH: segmented cyan/red reactor bar.
+        float hp = p.getHealth(), max = Math.max(1, p.getMaxHealth()), abs = p.getAbsorptionAmount();
+        int hcol = hp <= max * 0.3f ? (blink ? 0xFFFF3344 : 0xFF9D1727) : Config.main();
         if (p.hasEffect(MobEffects.POISON)) hcol = 0xFF9ACD32;
         else if (p.hasEffect(MobEffects.WITHER)) hcol = 0xFF8A7A7A;
         else if (p.isFullyFrozen()) hcol = 0xFF60C8FF;
-        if (hp <= max * 0.3f && blink) hcol = 0xFFFFFFFF;
         int segs = Mth.clamp((int) Math.ceil(max / 2f), 1, 20);
-        double period = barW / segs, sw = period - 1;
+        double period = barW / segs, sw = Math.max(1, period - 1);
         for (int i = 0; i < segs; i++) {
             double sx = lx + i * period;
             rect(g, sx, y, sw, barH, bg);
             double fill = Mth.clamp((hp - i * 2) / 2.0, 0, 1);
-            if (fill > 0) rect(g, sx, y, sw * fill, barH, hcol);
-            if (abs > 0) {
-                double af = Mth.clamp((abs - i * 2) / 2.0, 0, 1);
-                if (af > 0) rect(g, sx, y - 1.6, sw * af, 1.2, 0xFFFFD040);
+            if (fill > 0) {
+                rect(g, sx, y, sw * fill, barH, hcol);
+                rect(g, sx, y, sw * fill, 0.8, 0x99FFFFFF);
             }
+            double af = Mth.clamp((abs - i * 2) / 2.0, 0, 1);
+            if (af > 0) rect(g, sx, y - 1.6, sw * af, 1.2, 0xFFFFD040);
         }
-        String hpTxt = String.format("HP %.0f/%.0f%s", hp, max, abs > 0 ? "  +" + (int) Math.ceil(abs) : "");
-        text(g, f, hpTxt, lx, y - 9, 0.5f, Config.text());
+        String hpTxt = String.format("♥ INTEGRITY %.0f/%.0f%s", hp, max, abs > 0 ? "  +" + (int) Math.ceil(abs) : "");
+        text(g, f, hpTxt, lx, y - 9, 0.5f, hp <= max * 0.3f ? 0xFFFF6670 : Config.text());
 
-        // ---- armor (thin line above health + text)
+        // ARMOR: ten plated segments, with durability warning for damaged equipment.
         int armor = p.getArmorValue();
-        if (armor > 0) {
-            double tough = p.getAttributeValue(Attributes.ARMOR_TOUGHNESS);
-            for (int i = 0; i < 10; i++) {
-                double sx = lx + i * (barW / 10.0);
-                double aw = barW / 10.0 - 1;
-                rect(g, sx, y - 3.4, aw, 1.2, 0x55AAB4C0);
-                double fill = Mth.clamp((armor - i * 2) / 2.0, 0, 1);
-                if (fill > 0) rect(g, sx, y - 3.4, aw * fill, 1.2, 0xFFC8D4E0);
+        double armorY = y - 3.4;
+        int armorCol = 0xFFD0DCE8;
+        int totalDurability = 0, remainingDurability = 0;
+        for (EquipmentSlot slot : ARMOR) {
+            ItemStack item = p.getItemBySlot(slot);
+            if (!item.isEmpty() && item.isDamageableItem()) {
+                totalDurability += item.getMaxDamage();
+                remainingDurability += Math.max(0, item.getMaxDamage() - item.getDamageValue());
             }
-            String at = String.format("ARM %d  TGH %.0f", armor, tough);
-            text(g, f, at, lx + barW - textW(f, at, 0.5f), y - 9, 0.5f, 0xFFC8D4E0);
         }
+        int durabilityPct = totalDurability == 0 ? 100 : (int) Math.round(remainingDurability * 100.0 / totalDurability);
+        if (durabilityPct < 20 && blink) armorCol = 0xFFFF4545;
+        for (int i = 0; i < 10; i++) {
+            double sx = lx + i * (barW / 10.0), aw = barW / 10.0 - 1;
+            rect(g, sx, armorY, aw, 1.2, 0x667B8998);
+            double fill = Mth.clamp((armor - i * 2) / 2.0, 0, 1);
+            if (fill > 0) rect(g, sx, armorY, aw * fill, 1.2, armorCol);
+        }
+        String at = String.format("ARM %d  PLATING %d%%", armor, durabilityPct);
+        text(g, f, at, lx + barW - textW(f, at, 0.5f), y - 9, 0.5f, armorCol);
 
-        // ---- hunger (right, fills from the right like vanilla)
+        // FOOD / POWER: hunger segments, food-consumption preview and saturation indicator.
         FoodData fd = p.getFoodData();
         int food = fd.getFoodLevel();
         float sat = fd.getSaturationLevel();
-        int fcol = AMBER;
-        if (p.hasEffect(MobEffects.HUNGER)) fcol = 0xFF8AB028;
+        int fcol = p.hasEffect(MobEffects.HUNGER) ? 0xFF8AB028 : 0xFFFFA52E;
         if (food <= 6 && blink) fcol = 0xFFFF4040;
-
-        ItemStack st = p.getMainHandItem();
-        FoodProperties fp = st.get(DataComponents.FOOD);
-        if (fp == null) { st = p.getOffhandItem(); fp = st.get(DataComponents.FOOD); }
+        ItemStack held = p.getMainHandItem();
+        FoodProperties fp = held.get(DataComponents.FOOD);
+        if (fp == null) { held = p.getOffhandItem(); fp = held.get(DataComponents.FOOD); }
         int newFood = food;
         float newSat = sat;
         boolean preview = false;
@@ -562,28 +574,46 @@ public class HudRenderer implements HudElement {
             newSat = Math.min(newFood, sat + fp.saturation());
         }
         double pulse = 0.45 + 0.35 * Math.sin(now / 160.0);
-
         double fperiod = barW / 10.0, fsw = fperiod - 1;
         for (int i = 0; i < 10; i++) {
             double sx = rx + barW - (i + 1) * fperiod + 1;
             rect(g, sx, y, fsw, barH, bg);
             double fill = Mth.clamp((food - i * 2) / 2.0, 0, 1);
-            if (fill > 0) rect(g, sx + fsw * (1 - fill), y, fsw * fill, barH, fcol);
+            if (fill > 0) {
+                rect(g, sx + fsw * (1 - fill), y, fsw * fill, barH, fcol);
+                rect(g, sx + fsw * (1 - fill), y, fsw * fill, 0.8, 0x99FFFFFF);
+            }
             if (preview) {
                 double nf = Mth.clamp((newFood - i * 2) / 2.0, 0, 1);
-                if (nf > fill) rect(g, sx + fsw * (1 - nf), y, fsw * (nf - fill), barH, alpha(0xFFE070, pulse));
+                if (nf > fill) rect(g, sx + fsw * (1 - nf), y, fsw * (nf - fill), barH, alpha(0xFFFFE070, pulse));
             }
         }
-        // saturation line
         rect(g, rx, y - 1.6, barW, 1.2, 0x55806010);
         double satW = barW * Mth.clamp(sat / 20.0, 0, 1);
         rect(g, rx + barW - satW, y - 1.6, satW, 1.2, 0xFFFFE070);
         if (preview && newSat > sat) {
             double nW = barW * Mth.clamp(newSat / 20.0, 0, 1);
-            rect(g, rx + barW - nW, y - 1.6, nW - satW, 1.2, alpha(0xFFFFFF, pulse));
+            if (nW > satW) rect(g, rx + barW - nW, y - 1.6, nW - satW, 1.2, alpha(0xFFFFFF, pulse));
         }
-        String ft = String.format("PWR %d  SAT %.1f%s", food, sat, preview ? "  +" + (newFood - food) : "");
-        text(g, f, ft, rx + barW - textW(f, ft, 0.5f), y - 9, 0.5f, AMBER);
+        String ft = String.format("POWER %d/20  SAT %.1f%s", food, sat, preview ? "  +" + (newFood - food) : "");
+        text(g, f, ft, rx + barW - textW(f, ft, 0.5f), y - 9, 0.5f, fcol);
+
+        // OXYGEN: display a separate segmented pressure gauge only while submerged.
+        if (p.isUnderWater()) {
+            int air = Mth.clamp(p.getAirSupply(), 0, p.getMaxAirSupply());
+            int maxAir = Math.max(1, p.getMaxAirSupply());
+            double oy = y - 20;
+            String oxygenLabel = "O2 // " + Math.round(air * 100.0 / maxAir) + "%";
+            text(g, f, oxygenLabel, rx + barW - textW(f, oxygenLabel, 0.5f), oy - 7, 0.5f,
+                    air < maxAir * 0.25 ? (blink ? 0xFFFF3A3A : 0xFF9E1D28) : 0xFF65DFFF);
+            for (int i = 0; i < 10; i++) {
+                double sx = rx + i * (barW / 10.0);
+                double ow = barW / 10.0 - 1;
+                rect(g, sx, oy, ow, 3, bg);
+                double fill = Mth.clamp((air - i * (maxAir / 10.0)) / Math.max(1.0, maxAir / 10.0), 0, 1);
+                if (fill > 0) rect(g, sx, oy, ow * fill, 3, air < maxAir * 0.25 ? 0xFFFF3A3A : 0xFF65DFFF);
+            }
+        }
     }
 
     // ---------------------------------------------------------------- warnings / damage
