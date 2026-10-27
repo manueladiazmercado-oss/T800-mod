@@ -667,7 +667,7 @@ public class HudRenderer implements HudElement {
         if (Config.terminationV2) {
             // Transparent heuristic adjustments: this is a tactical index, not a true probability.
             playerPower += armorDurabilityPercent(self) * 0.06;
-            playerPower += self.getFoodData().getFoodLevel() * 0.35;
+            if (self instanceof Player player) playerPower += player.getFoodData().getFoodLevel() * 0.35;
             playerPower += self.getAbsorptionAmount() * 0.8;
             if (self.hasEffect(MobEffects.STRENGTH)) playerPower += 5;
             if (self.hasEffect(MobEffects.WEAKNESS)) playerPower -= 5;
