@@ -213,37 +213,35 @@ public final class VoiceAssistantService {
         String text = message.replaceAll("[^\\p{L}\\p{N} .,;:!?'-]", " ")
                 .replaceAll("\\s{2,}", " ").trim();
         if (text.isBlank()) return;
-        if (text.length() > 500) text = text.substring(0, 500);
+        if (text.length() > 350) text = text.substring(0, 350);
         final String safe = text;
-        try {
-            String os = System.getProperty("os.name", "").toLowerCase(Locale.ROOT);
-            boolean english = looksEnglish(safe);
-            if (os.contains("win")) {
-                String culture = english ? "en-US" : "de-DE";
-                // System.Speech uses the best matching installed voice; a missing locale falls back to Windows' default.
-                String script = "Add-Type -AssemblyName System.Speech; " +
-                        "$s=New-Object System.Speech.Synthesis.SpeechSynthesizer; $s.Rate=-1; $s.Volume=100; " +
-                        "try {$s.SelectVoiceByHints([System.Speech.Synthesis.VoiceGender]::NotSet, " +
-                        "[System.Speech.Synthesis.VoiceAge]::NotSet, 0, [Globalization.CultureInfo]::GetCultureInfo('" + culture + "'))} catch {}; " +
-                        "$s.Speak('" + safe.replace("'","''") + "')";
-                new ProcessBuilder("powershell", "-NoProfile", "-Command", script).redirectErrorStream(true).start();
-            } else if (os.contains("mac")) {
-                // Prefer a native voice for the detected language, but fall back to the user's default voice.
-                String preferred = english ? "Samantha" : "Anna";
-                String voice = preferred;
-                try {
-                    Process list = new ProcessBuilder("say", "-v", "?").redirectErrorStream(true).start();
-                    String voices = new String(list.getInputStream().readAllBytes(), StandardCharsets.UTF_8);
-                    list.waitFor(2, TimeUnit.SECONDS);
-                    if (!voices.contains(preferred)) voice = "";
-                } catch (Exception ignored) { voice = ""; }
-                if (voice.isEmpty()) new ProcessBuilder("say", "-r", "175", safe).redirectErrorStream(true).start();
-                else new ProcessBuilder("say", "-v", voice, "-r", "175", safe).redirectErrorStream(true).start();
-            } else {
-                new ProcessBuilder("espeak", "-s", "155", "-v", english ? "en-us" : "de", safe)
-                        .redirectErrorStream(true).start();
+        // Never enumerate installed voices here: that starts an extra process and can delay every utterance.
+        // Run TTS on its own daemon thread so keybinds and the Minecraft client never wait for speech startup.
+        Thread tts = new Thread(() -> {
+            try {
+                String os = System.getProperty("os.name", "").toLowerCase(Locale.ROOT);
+                boolean english = looksEnglish(safe);
+                if (os.contains("win")) {
+                    String culture = english ? "en-US" : "de-DE";
+                    String script = "Add-Type -AssemblyName System.Speech; " +
+                            "$s=New-Object System.Speech.Synthesis.SpeechSynthesizer; $s.Rate=0; $s.Volume=100; " +
+                            "try {$s.SelectVoiceByHints([System.Speech.Synthesis.VoiceGender]::NotSet, " +
+                            "[System.Speech.Synthesis.VoiceAge]::NotSet, 0, [Globalization.CultureInfo]::GetCultureInfo('" + culture + "'))} catch {}; " +
+                            "$s.Speak('" + safe.replace("'","''") + "')";
+                    new ProcessBuilder("powershell", "-NoProfile", "-Command", script).redirectErrorStream(true).start();
+                } else if (os.contains("mac")) {
+                    // Use the default macOS voice immediately; set a preferred language voice in macOS settings if needed.
+                    new ProcessBuilder("say", "-r", "190", safe).redirectErrorStream(true).start();
+                } else {
+                    new ProcessBuilder("espeak", "-s", "175", "-v", english ? "en-us" : "de", safe)
+                            .redirectErrorStream(true).start();
+                }
+            } catch (Exception ex) {
+                status = "TTS UNAVAILABLE // " + ex.getClass().getSimpleName();
             }
-        } catch (Exception ex) { status = "TTS UNAVAILABLE // " + ex.getClass().getSimpleName(); }
+        }, "t800-tts");
+        tts.setDaemon(true);
+        tts.start();
     }
 
     private boolean looksEnglish(String text) {
