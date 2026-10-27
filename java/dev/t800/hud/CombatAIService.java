@@ -66,7 +66,8 @@ public final class CombatAIService {
         threats.sort(Comparator.comparingDouble((Threat t)->t.score).reversed());
         if(threats.size()>LIMIT)threats.subList(LIMIT,threats.size()).clear();
         if(likely!=null){Memory m=memory.computeIfAbsent(key(likely),k->new Memory());m.hits++;m.pattern=samples.get(likely.getId()).pattern;saveMemory();}
-        LivingEntity target=T800HudClient.TRACKER.target;\n        OpponentIntelService.INSTANCE.observeTarget(target);
+        LivingEntity target=T800HudClient.TRACKER.target;
+        OpponentIntelService.INSTANCE.observeTarget(target);
         for(Threat t:threats)if(t.entity==target){advice=(target instanceof Player ? OpponentIntelService.advice(OpponentIntelService.detectMode(mc), target, t.distance, !projectileThreats.isEmpty()) : t.advice)+" ["+t.pattern+"]";break;}
         if(target==null || !target.isAlive()) lastTargetId = Integer.MIN_VALUE;
         else if(target.getId()!=lastTargetId){
