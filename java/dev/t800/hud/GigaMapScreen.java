@@ -151,13 +151,37 @@ public class GigaMapScreen extends Screen {
                     mapX + gx * cellSize + dot, mapY + gz * cellSize + dot, color);
         }
 
+        // Combat-linked priority markers use the same sorted threat list as the HUD.
+        if (Config.gigaMapCombatLink) {
+            int rank = 0;
+            for (CombatAIService.Threat threat : CombatAIService.INSTANCE.threats()) {
+                LivingEntity e = threat.entity;
+                if (e == null || !e.isAlive()) continue;
+                double dx = e.getX() - px, dz = e.getZ() - pz;
+                double rx = dx, rz = dz;
+                switch (Math.floorMod(yawStep, 4)) {
+                    case 1 -> { rx = -dz; rz = dx; }
+                    case 2 -> { rx = -dx; rz = -dz; }
+                    case 3 -> { rx = dz; rz = -dx; }
+                }
+                int gx = CELLS / 2 + (int) Math.round(rx / scale);
+                int gz = CELLS / 2 + (int) Math.round(rz / scale);
+                if (gx < 0 || gx >= CELLS || gz < 0 || gz >= CELLS) continue;
+                int mx = mapX + gx * cellSize, my = mapY + gz * cellSize;
+                int c = threat.score >= 75 ? 0xFFFF3434 : threat.score >= 45 ? 0xFFFFB52E : 0xFF6BFF88;
+                g.fill(mx - 1, my - 1, mx + Math.max(3, cellSize) + 1, my + Math.max(3, cellSize) + 1, c);
+                HudRenderer.text(g, font, Integer.toString(++rank), mx + 2, my + 1, 0.45f, 0xFFFFFFFF);
+                if (rank >= 5) break;
+            }
+        }
+
         int cx = mapX + (CELLS / 2) * cellSize;
         int cy = mapY + (CELLS / 2) * cellSize;
         g.fill(cx - 2, cy - 2, cx + cellSize + 2, cy + cellSize + 2, Config.main());
         HudRenderer.text(g, font, "N", mapX + mapSize - 7, mapY + 2, 0.5f, Config.text());
         HudRenderer.text(g, font, String.format("X %d  Y %d  Z %d   •   1 CELL = %d BLOCK(S)", px,
                 mc.player.blockPosition().getY(), pz, scale), 10, height - 39, 0.48f, Config.text());
-        HudRenderer.text(g, font, "RED HOSTILE  •  BLUE PLAYER  •  YELLOW OTHER  •  CAVES/STRUCTURE BOOKMARKS NOT INCLUDED",
+        HudRenderer.text(g, font, (Config.gigaMapCombatLink ? "PRIORITY NUMBERS = COMBAT AI RANK  •  " : "") + "RED HOSTILE  •  BLUE PLAYER  •  YELLOW OTHER  •  CAVES/STRUCTURE BOOKMARKS NOT INCLUDED",
                 10, height - 48, 0.40f, HudRenderer.AMBER);
     }
 }
