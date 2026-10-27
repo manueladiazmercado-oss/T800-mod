@@ -14,7 +14,9 @@ public final class Config {
 
     public static boolean hud = true, vision = false, nightVision = false, infraredVision = false, customBars = true,
             terminationMode = false, combatAnalytics = true, armorAlerts = true, terrainLayer = true,
-            performanceProfile = false, deathRecovery = true,\n            adaptiveCombatAI = true, multiTargetAnalysis = true, combatMemory = true, survivalProtocol = true,\n            terminationV2 = true, voiceAssistant = false, gigaMapCombatLink = true, selfDiagnostics = true,
+            performanceProfile = false, deathRecovery = true,
+            adaptiveCombatAI = true, multiTargetAnalysis = true, combatMemory = true, survivalProtocol = true,
+            terminationV2 = true, voiceAssistant = false, gigaMapCombatLink = true, selfDiagnostics = true,
             showSystem = true, showStatus = true, showCompass = true, showTarget = true,
             showEffects = true, boot = true, vignette = true, damageFlash = true, sounds = true;
     public static int theme = 0, rangeIdx = 1, coneIdx = 1, sizeIdx = 1;
@@ -81,7 +83,12 @@ public final class Config {
             armorAlerts = b(p, "armorAlerts", true);
             terrainLayer = b(p, "terrainLayer", true);
             performanceProfile = b(p, "performanceProfile", false);
-            deathRecovery = b(p, "deathRecovery", true);\n            adaptiveCombatAI = b(p, "adaptiveCombatAI", true); multiTargetAnalysis = b(p, "multiTargetAnalysis", true);\n            combatMemory = b(p, "combatMemory", true); survivalProtocol = b(p, "survivalProtocol", true);\n            terminationV2 = b(p, "terminationV2", true); voiceAssistant = b(p, "voiceAssistant", false);\n            gigaMapCombatLink = b(p, "gigaMapCombatLink", true); selfDiagnostics = b(p, "selfDiagnostics", true);\n            showSystem = b(p, "showSystem", true);
+            deathRecovery = b(p, "deathRecovery", true);
+            adaptiveCombatAI = b(p, "adaptiveCombatAI", true); multiTargetAnalysis = b(p, "multiTargetAnalysis", true);
+            combatMemory = b(p, "combatMemory", true); survivalProtocol = b(p, "survivalProtocol", true);
+            terminationV2 = b(p, "terminationV2", true); voiceAssistant = b(p, "voiceAssistant", false);
+            gigaMapCombatLink = b(p, "gigaMapCombatLink", true); selfDiagnostics = b(p, "selfDiagnostics", true);
+            showSystem = b(p, "showSystem", true);
             showStatus = b(p, "showStatus", true); showCompass = b(p, "showCompass", true);
             showTarget = b(p, "showTarget", true); showEffects = b(p, "showEffects", true);
             boot = b(p, "boot", true); vignette = b(p, "vignette", true);
@@ -106,7 +113,11 @@ public final class Config {
             p.setProperty("armorAlerts", String.valueOf(armorAlerts));
             p.setProperty("terrainLayer", String.valueOf(terrainLayer));
             p.setProperty("performanceProfile", String.valueOf(performanceProfile));
-            p.setProperty("deathRecovery", String.valueOf(deathRecovery));\n            p.setProperty("adaptiveCombatAI", String.valueOf(adaptiveCombatAI)); p.setProperty("multiTargetAnalysis", String.valueOf(multiTargetAnalysis));\n            p.setProperty("combatMemory", String.valueOf(combatMemory)); p.setProperty("survivalProtocol", String.valueOf(survivalProtocol));\n            p.setProperty("terminationV2", String.valueOf(terminationV2)); p.setProperty("voiceAssistant", String.valueOf(voiceAssistant));\n            p.setProperty("gigaMapCombatLink", String.valueOf(gigaMapCombatLink)); p.setProperty("selfDiagnostics", String.valueOf(selfDiagnostics));
+            p.setProperty("deathRecovery", String.valueOf(deathRecovery));
+            p.setProperty("adaptiveCombatAI", String.valueOf(adaptiveCombatAI)); p.setProperty("multiTargetAnalysis", String.valueOf(multiTargetAnalysis));
+            p.setProperty("combatMemory", String.valueOf(combatMemory)); p.setProperty("survivalProtocol", String.valueOf(survivalProtocol));
+            p.setProperty("terminationV2", String.valueOf(terminationV2)); p.setProperty("voiceAssistant", String.valueOf(voiceAssistant));
+            p.setProperty("gigaMapCombatLink", String.valueOf(gigaMapCombatLink)); p.setProperty("selfDiagnostics", String.valueOf(selfDiagnostics));
             p.setProperty("showSystem", String.valueOf(showSystem)); p.setProperty("showStatus", String.valueOf(showStatus));
             p.setProperty("showCompass", String.valueOf(showCompass)); p.setProperty("showTarget", String.valueOf(showTarget));
             p.setProperty("showEffects", String.valueOf(showEffects)); p.setProperty("boot", String.valueOf(boot));
