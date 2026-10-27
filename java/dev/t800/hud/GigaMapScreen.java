@@ -21,6 +21,9 @@ public class GigaMapScreen extends Screen {
     private static final int[] ZOOM = {1, 2, 4, 8, 16};
     private int zoomIndex = 0;
     private boolean rotateWithPlayer = true;
+    private boolean relief3D = true;
+    private boolean showHeight = true;
+    private final int[][] terrainHeights = new int[CELLS][CELLS];
     private final int[][] terrainColors = new int[CELLS][CELLS];
     private int cachedX = Integer.MIN_VALUE, cachedZ = Integer.MIN_VALUE, cachedYaw = Integer.MIN_VALUE, cachedZoom = -1;
     private boolean cachedTerrainLayer;
@@ -44,6 +47,14 @@ public class GigaMapScreen extends Screen {
             zoomIndex = Math.max(0, zoomIndex - 1);
             cacheReady = false;
         }).bounds(width / 5 + width / 7, y, Math.max(55, width / 7 - 8), 20).build());
+        addRenderableWidget(Button.builder(Component.literal("VIEW: " + (relief3D ? "3D RELIEF" : "2D")), b -> {
+            relief3D = !relief3D;
+            b.setMessage(Component.literal("VIEW: " + (relief3D ? "3D RELIEF" : "2D")));
+        }).bounds(width / 2 + 2, y, Math.max(86, width / 6), 20).build());
+        addRenderableWidget(Button.builder(Component.literal("HEIGHT: " + (showHeight ? "ON" : "OFF")), b -> {
+            showHeight = !showHeight;
+            b.setMessage(Component.literal("HEIGHT: " + (showHeight ? "ON" : "OFF")));
+        }).bounds(width / 2 + Math.max(90, width / 6) + 4, y, Math.max(76, width / 7), 20).build());
         addRenderableWidget(Button.builder(Component.literal("TERRAIN: " + (Config.terrainLayer ? "ON" : "OFF")), b -> {
             Config.terrainLayer = !Config.terrainLayer;
             Config.save();
@@ -67,9 +78,11 @@ public class GigaMapScreen extends Screen {
                 }
                 int wx = anchorX + rx, wz = anchorZ + rz;
                 int color = 0xFF111720;
+                terrainHeights[gz][gx] = Integer.MIN_VALUE;
                 BlockPos probe = new BlockPos(wx, centerY, wz);
                 if (mc.level.hasChunkAt(probe)) {
                     int topY = mc.level.getHeight(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, wx, wz);
+                    terrainHeights[gz][gx] = topY;
                     BlockPos surface = new BlockPos(wx, Math.max(mc.level.getMinY(), topY - 1), wz);
                     BlockState state = mc.level.getBlockState(surface);
                     int rgb = state.getMapColor(mc.level, surface).col;
@@ -121,12 +134,52 @@ public class GigaMapScreen extends Screen {
         HudRenderer.text(g, font, "T-800 // GIGAMAP", mapX, Math.max(4, mapY - 20), 0.8f, Config.main());
         HudRenderer.text(g, font, "SURFACE SCAN • LOADED CHUNKS ONLY", mapX, Math.max(14, mapY - 10), 0.45f, Config.dim());
 
-        for (int gz = 0; gz < CELLS; gz++) {
-            for (int gx = 0; gx < CELLS; gx++) {
-                int sx = mapX + gx * cellSize;
-                int sy = mapY + gz * cellSize;
-                g.fill(sx, sy, sx + cellSize, sy + cellSize, terrainColors[gz][gx]);
+        if (!relief3D) {
+            for (int gz = 0; gz < CELLS; gz++) {
+                for (int gx = 0; gx < CELLS; gx++) {
+                    int sx = mapX + gx * cellSize;
+                    int sy = mapY + gz * cellSize;
+                    g.fill(sx, sy, sx + cellSize, sy + cellSize, terrainColors[gz][gx]);
+                    if (showHeight && terrainHeights[gz][gx] != Integer.MIN_VALUE && cellSize >= 5
+                            && Math.floorMod(gx + gz, 5) == 0) {
+                        HudRenderer.text(g, font, Integer.toString(terrainHeights[gz][gx]), sx, sy, 0.38f, 0xFFEAF2FF);
+                    }
+                }
             }
+        } else {
+            // Height-aware oblique relief: sampled surface columns are offset by actual Y level.
+            int minH = Integer.MAX_VALUE, maxH = Integer.MIN_VALUE;
+            for (int[] row : terrainHeights) for (int yv : row) if (yv != Integer.MIN_VALUE) {
+                minH = Math.min(minH, yv); maxH = Math.max(maxH, yv);
+            }
+            if (minH == Integer.MAX_VALUE) { minH = 0; maxH = 0; }
+            int relief = Math.max(1, Math.min(4, mapSize / (CELLS * 12)));
+            for (int gz = 0; gz < CELLS; gz++) {
+                for (int gx = 0; gx < CELLS; gx++) {
+                    int sx = mapX + gx * cellSize;
+                    int sy = mapY + gz * cellSize;
+                    int hy = terrainHeights[gz][gx];
+                    int rise = hy == Integer.MIN_VALUE ? 0 : (hy - minH) * relief;
+                    int drawY = sy - rise / 2;
+                    int col = terrainColors[gz][gx];
+                    if (hy != Integer.MIN_VALUE && maxH > minH) {
+                        int norm = (hy - minH) * 255 / (maxH - minH);
+                        int rr = (col >> 16) & 255, gg = (col >> 8) & 255, bb = col & 255;
+                        rr = Math.min(255, (rr * 3 + norm) / 4);
+                        gg = Math.min(255, (gg * 3 + norm / 2) / 4);
+                        bb = Math.min(255, (bb * 3 + (255 - norm) / 3) / 4);
+                        col = 0xFF000000 | (rr << 16) | (gg << 8) | bb;
+                    }
+                    if (rise > 0 && cellSize > 1)
+                        g.fill(sx, drawY + cellSize, sx + cellSize, sy + cellSize, 0xFF101820);
+                    g.fill(sx, drawY, sx + cellSize, drawY + cellSize, col);
+                    if (showHeight && hy != Integer.MIN_VALUE && cellSize >= 5
+                            && Math.floorMod(gx + gz, 7) == 0) {
+                        HudRenderer.text(g, font, Integer.toString(hy), sx, drawY, 0.38f, 0xFFFFFFFF);
+                    }
+                }
+            }
+            HudRenderer.text(g, font, "RELIEF " + minH + " - " + maxH + " Y", mapX + 3, mapY + 3, 0.45f, Config.text());
         }
 
         // Plot currently loaded living entities relative to the player. No chunk is forced to load.
