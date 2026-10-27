@@ -9,5 +9,9 @@
   "key.t800hud.analytics": "Open combat analytics",
   "key.t800hud.gigamap": "Open GigaMap",
   "key.t800hud.termination": "Toggle termination target lock",
-  "key.t800hud.performance": "Toggle performance profile",\n  "key.t800hud.voice": "T-800 Push-to-talk (hold F10)",\n  "key.t800hud.voice_confirm": "Confirm T-800 action",\n  "key.t800hud.voice_cancel": "Cancel T-800 action"
+  "key.t800hud.performance": "Toggle performance profile",
+  "key.t800hud.infrared": "Toggle infrared overlay",
+  "key.t800hud.voice": "T-800 Push-to-talk (hold F10)",
+  "key.t800hud.voice_confirm": "Confirm T-800 action",
+  "key.t800hud.voice_cancel": "Cancel T-800 action"
 }
