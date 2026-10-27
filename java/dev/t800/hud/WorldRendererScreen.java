@@ -121,11 +121,9 @@ public final class WorldRendererScreen extends Screen {
         if (!cacheReady || centerX != mc.player.blockPosition().getX()
                 || centerZ != mc.player.blockPosition().getZ()) rebuild(mc);
 
-        super.render(g, mouseX, mouseY, partialTick);
         HudRenderer.text(g, font, "T-800 // VOXEL WORLD RENDERER", 12, 10, 0.9f, Config.main());
         HudRenderer.text(g, font, "CLIENT-SIDE BLOCK SCAN • LOADED CHUNKS ONLY • ISOMETRIC VIEW", 12, 23, 0.48f, Config.dim());
         int cell = ZOOM[zoom];
-        int tileW = cell * 2, tileH = cell;
         int originX = width / 2;
         int originY = Math.max(48, height / 2 - GRID * cell / 2);
         int minH = Integer.MAX_VALUE, maxH = Integer.MIN_VALUE;
@@ -142,7 +140,6 @@ public final class WorldRendererScreen extends Screen {
                 if (h == Integer.MIN_VALUE) continue;
                 int sx = originX + (gx - gz) * cell - cell;
                 int sy = originY + (gx + gz) * (cell / 2) - (h - minH) * Math.max(1, cell / 2);
-                int baseY = originY + (gx + gz) * (cell / 2);
                 int color = colors[gz][gx];
                 int vertical = Math.min((maxH - minH + 1) * Math.max(1, cell / 2), Math.max(cell, (h - minH + 1) * Math.max(1, cell / 2)));
                 if (showBlocks) {
@@ -159,6 +156,8 @@ public final class WorldRendererScreen extends Screen {
         HudRenderer.text(g, font, "CENTER X " + centerX + "  Y " + centerY + "  Z " + centerZ, 12, height - 48, 0.5f, Config.text());
         HudRenderer.text(g, font, "HEIGHT RANGE " + minH + "–" + maxH + " Y  •  ROTATION " + (rotation * 90) + "°  •  BLOCK COLOR = MAP COLOR", 12, height - 38, 0.43f, Config.dim());
         HudRenderer.text(g, font, "Prototype renderer: terrain is reconstructed from surface samples, not a full cave/texture renderer.", 12, height - 59, 0.42f, HudRenderer.AMBER);
+        // Draw controls last so the terrain cannot cover the buttons.
+        super.render(g, mouseX, mouseY, partialTick);
     }
 
     @Override
