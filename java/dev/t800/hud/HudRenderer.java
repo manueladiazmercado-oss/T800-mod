@@ -85,6 +85,7 @@ public class HudRenderer implements HudElement {
             if (t.onScreen) { drawReticle(g, t, now); drawTargetPanel(g, mc, t, w, now); }
             else if (t.behindOrOff) drawEdgeHint(g, mc, t, w, h, now);
         }
+        if (T800HudClient.analyticsOverlayVisible && Config.combatAnalytics) drawCombatOverlay(g, mc, w, h, t);
         drawKillNotice(g, mc, t, w, h, now);
         if (Config.boot) drawBoot(g, mc, w, h, now);
     }
@@ -563,16 +564,139 @@ public class HudRenderer implements HudElement {
         text(g, f, hex, px, by + 3.5, s, Config.dim());
     }
 
+    /** Compact live combat-analysis panel rendered over the world on the left side of the HUD. */
+    private void drawCombatOverlay(GuiGraphics g, Minecraft mc, int screenW, int screenH, TargetTracker tracker) {
+        LocalPlayer self = mc.player;
+        if (self == null) return;
+
+        int x = 8;
+        int panelW = Math.min(172, Math.max(132, screenW / 4));
+        int panelH = 112;
+        int y = Math.max(88, Math.min(screenH - panelH - 8, screenH / 2 - panelH / 2));
+        g.fill(x, y, x + panelW, y + panelH, 0xD0091018);
+        g.fill(x, y, x + 2, y + panelH, Config.main());
+        g.fill(x + 2, y, x + panelW, y + 1, Config.dim());
+
+        Font f = mc.font;
+        float sc = 0.52f * Config.scaleMul();
+        double lineH = 7.0 * Config.scaleMul();
+        double tx = x + 7;
+        double ty = y + 5;
+        text(g, f, "T-800 // COMBAT ANALYSIS", tx, ty, sc, Config.main());
+        ty += lineH + 1;
+
+        LivingEntity target = tracker.target;
+        if (target == null || !target.isAlive() || target.level() != mc.level) {
+            text(g, f, "NO TARGET LOCK", tx, ty + 2, sc, AMBER);
+            text(g, f, "Aim at a loaded entity", tx, ty + lineH + 3, sc, Config.text());
+            text(g, f, "to scan combat data.", tx, ty + lineH * 2 + 3, sc, Config.dim());
+            text(g, f, "F4  CLOSE PANEL", tx, y + panelH - 10, sc, Config.dim());
+            return;
+        }
+
+        double targetAttack = safeAttribute(target, Attributes.ATTACK_DAMAGE);
+        double targetToughness = safeAttribute(target, Attributes.ARMOR_TOUGHNESS);
+        double playerAttack = safeAttribute(self, Attributes.ATTACK_DAMAGE);
+        double playerToughness = safeAttribute(self, Attributes.ARMOR_TOUGHNESS);
+        double targetScore = combatScore(target, tracker.distance);
+        double termChance = terminationChance(self, target, playerAttack, playerToughness,
+                targetAttack, targetToughness, tracker.distance);
+        String type = target instanceof Player ? "PLAYER" : TargetTracker.isHostile(target) ? "HOSTILE" : "PASSIVE";
+        String weapon = target.getMainHandItem().isEmpty() ? "NONE" : target.getMainHandItem().getHoverName().getString();
+        if (weapon.length() > 20) weapon = weapon.substring(0, 20);
+        int armorDurability = armorDurabilityPercent(target);
+        String rank = targetScore >= 80 ? "EXTREME" : targetScore >= 60 ? "HIGH"
+                : targetScore >= 35 ? "MODERATE" : "LOW";
+        String chanceLabel = termChance >= 75 ? "FAVOURABLE" : termChance >= 45 ? "RISKY" : "DANGEROUS";
+
+        String[] rows = {
+                target.getName().getString().toUpperCase() + " / " + type,
+                String.format("HP %.0f/%.0f  DIST %.1fm", target.getHealth(), target.getMaxHealth(), target.distanceTo(self)),
+                String.format("ATTACK %.1f DMG", targetAttack),
+                "WEAPON " + weapon.toUpperCase(),
+                String.format("ARMOR %d  TOUGH %.1f", target.getArmorValue(), targetToughness),
+                String.format("ARMOR CONDITION %d%%", armorDurability),
+                String.format("OBSERVED DPS %.1f", tracker.estimatedDps),
+                String.format("THREAT %02.0f/100  %s", targetScore, rank),
+                String.format("TERMINATION EST. %02.0f%%", termChance),
+                "OUTLOOK " + chanceLabel
+        };
+        int colorThreat = targetScore >= 80 ? 0xFFFF4040 : targetScore >= 60 ? AMBER : Config.text();
+        for (int i = 0; i < rows.length; i++) {
+            int color = (i == 7) ? colorThreat : (i == 8 || i == 9) ? (termChance < 35 ? 0xFFFF4040 : termChance < 60 ? AMBER : Config.main()) : Config.text();
+            text(g, f, rows[i], tx, ty + lineH * i, sc, color);
+        }
+        double barY = y + panelH - 7;
+        g.fill((int) tx, (int) barY, x + panelW - 7, (int) barY + 2, Config.dim());
+        g.fill((int) tx, (int) barY, (int) (tx + (panelW - 14) * targetScore / 100.0), (int) barY + 2, colorThreat);
+        text(g, f, "F4 CLOSE", x + panelW - 38, y + panelH - 15, 0.42f, Config.dim());
+    }
+
+    private static double safeAttribute(LivingEntity entity, net.minecraft.core.Holder<net.minecraft.world.entity.ai.attributes.Attribute> attribute) {
+        try { return Math.max(0.0, entity.getAttributeValue(attribute)); }
+        catch (RuntimeException ignored) { return 0.0; }
+    }
+
+    /** A visible, deliberately heuristic 0-100 danger index; it is not a guaranteed win probability. */
+    private static double combatScore(LivingEntity e, double distance) {
+        double maxHealth = Math.max(1.0, e.getMaxHealth());
+        double healthScore = Mth.clamp(Math.sqrt(maxHealth / 100.0), 0, 1);
+        double attack = safeAttribute(e, Attributes.ATTACK_DAMAGE);
+        double attackScore = Mth.clamp(attack / 30.0, 0, 1);
+        double toughness = safeAttribute(e, Attributes.ARMOR_TOUGHNESS);
+        double armorScore = Mth.clamp((e.getArmorValue() + toughness * 1.2) / 30.0, 0, 1);
+        double weaponScore = weaponThreat(e);
+        String id = e.getType().toString().toLowerCase(java.util.Locale.ROOT);
+        double bossScore = (id.contains("warden") || id.contains("ender_dragon") || id.contains("wither")) ? 1.0
+                : (id.contains("ravager") || id.contains("elder_guardian") || id.contains("evoker")) ? 0.55 : 0.0;
+        double currentHealth = Mth.clamp(e.getHealth() / maxHealth, 0, 1);
+        double rangeFactor = distance > 20 ? 0.85 : 1.0;
+        return Mth.clamp((healthScore * 20 + attackScore * 25 + armorScore * 15
+                + weaponScore * 10 + bossScore * 25 + currentHealth * 5) * rangeFactor, 0, 100);
+    }
+
+    /** Estimate only: compares current player resources against the target's health, armor and damage. */
+    private static double terminationChance(LivingEntity self, LivingEntity target,
+                                            double playerAttack, double playerToughness,
+                                            double targetAttack, double targetToughness, double distance) {
+        double playerPower = self.getHealth() * 1.5 + self.getArmorValue() * 1.4
+                + playerToughness + playerAttack * 3.0 + (weaponThreat(self) * 8.0);
+        double targetPower = target.getHealth() * 0.4 + target.getArmorValue() * 1.4
+                + targetToughness + targetAttack * 4.0 + (weaponThreat(target) * 5.0);
+        String id = target.getType().toString().toLowerCase(java.util.Locale.ROOT);
+        if (id.contains("warden") || id.contains("ender_dragon") || id.contains("wither")) targetPower *= 1.8;
+        double chance = 100.0 * playerPower / Math.max(1.0, playerPower + targetPower);
+        if (self.getHealth() < self.getMaxHealth() * 0.5) chance -= 15;
+        if (distance > 8) chance -= Math.min(12, (distance - 8) * 0.7);
+        if (self.getMainHandItem().isEmpty()) chance -= 8;
+        return Mth.clamp(chance, 1, 99);
+    }
+
+    private static int armorDurabilityPercent(LivingEntity entity) {
+        int total = 0;
+        int remaining = 0;
+        for (EquipmentSlot slot : ARMOR) {
+            ItemStack stack = entity.getItemBySlot(slot);
+            if (stack.isEmpty() || stack.getMaxDamage() <= 0) continue;
+            total += stack.getMaxDamage();
+            remaining += Math.max(0, stack.getMaxDamage() - stack.getDamageValue());
+        }
+        return total == 0 ? 100 : (int) Math.round(remaining * 100.0 / total);
+    }
+
     private static double weaponThreat(LivingEntity e) {
         ItemStack held = e.getMainHandItem();
-        if (held.isEmpty()) return 0.12;
-        if (held.is(Items.NETHERITE_SWORD) || held.is(Items.NETHERITE_AXE)) return 1.0;
-        if (held.is(Items.DIAMOND_SWORD) || held.is(Items.DIAMOND_AXE)) return 0.88;
-        if (held.is(Items.IRON_SWORD) || held.is(Items.IRON_AXE) || held.is(Items.BOW)
-                || held.is(Items.CROSSBOW) || held.is(Items.TRIDENT)) return 0.68;
-        if (held.is(Items.STONE_SWORD) || held.is(Items.STONE_AXE)) return 0.48;
-        if (held.is(Items.WOODEN_SWORD) || held.is(Items.WOODEN_AXE)) return 0.30;
-        return 0.20;
+        double itemScore;
+        if (held.isEmpty()) itemScore = 0.05;
+        else if (held.is(Items.NETHERITE_SWORD) || held.is(Items.NETHERITE_AXE)) itemScore = 1.0;
+        else if (held.is(Items.DIAMOND_SWORD) || held.is(Items.DIAMOND_AXE)) itemScore = 0.88;
+        else if (held.is(Items.IRON_SWORD) || held.is(Items.IRON_AXE) || held.is(Items.BOW)
+                || held.is(Items.CROSSBOW) || held.is(Items.TRIDENT)) itemScore = 0.68;
+        else if (held.is(Items.STONE_SWORD) || held.is(Items.STONE_AXE)) itemScore = 0.48;
+        else if (held.is(Items.WOODEN_SWORD) || held.is(Items.WOODEN_AXE)) itemScore = 0.30;
+        else itemScore = 0.20;
+        // For mobs, the attack-damage attribute is often more informative than a held item.
+        return Mth.clamp(Math.max(itemScore, safeAttribute(e, Attributes.ATTACK_DAMAGE) / 30.0), 0, 1);
     }
 
     private void drawEdgeHint(GuiGraphics g, Minecraft mc, TargetTracker t, int w, int h, long now) {
