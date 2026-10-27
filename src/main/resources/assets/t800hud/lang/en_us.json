@@ -13,5 +13,5 @@
   "key.t800hud.infrared": "Toggle infrared overlay",
   "key.t800hud.voice": "T-800 Push-to-talk (hold F10)",
   "key.t800hud.voice_confirm": "Confirm T-800 action",
-  "key.t800hud.voice_cancel": "Cancel T-800 action"
+  "key.t800hud.voice_cancel": "Cancel T-800 action",\n  "key.t800hud.pvp_mode": "Cycle T-800 PvP profile"
 }
