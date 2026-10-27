@@ -51,6 +51,8 @@ public class T800HudClient implements ClientModInitializer {
                 Component.literal("T-800 Liquid Metal Food (pure chrome)"), PackActivationType.NORMAL);
         ResourceLoader.registerBuiltinPack(Identifier.fromNamespaceAndPath(MOD_ID, "t800_elytra"), self,
                 Component.literal("T-800 Cybernetic Elytra"), PackActivationType.DEFAULT_ENABLED);
+        ResourceLoader.registerBuiltinPack(Identifier.fromNamespaceAndPath(MOD_ID, "t800_crossbow"), self,
+                Component.literal("T-800 Animated Plasma Crossbow"), PackActivationType.DEFAULT_ENABLED);
 
         KeyMapping.Category category =
                 KeyMapping.Category.register(Identifier.fromNamespaceAndPath(MOD_ID, "main"));
