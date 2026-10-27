@@ -79,6 +79,7 @@ public class HudRenderer implements HudElement {
         if (Config.showStatus) yEnd = drawStatusPanel(g, mc, w, now);
         if (Config.showEffects && !Config.performanceProfile) drawEffects(g, mc, w, yEnd + 4);
         drawWarnings(g, mc, w, h, now);
+        drawProjectileWarning(g, mc, w, now);
         if (Config.customBars && survival(mc)) drawBars(g, mc, w, h, now);
 
         if (Config.showTarget && t.target != null) {
@@ -462,6 +463,24 @@ public class HudRenderer implements HudElement {
         }
     }
 
+    /** Shows the closest predicted projectile path and estimated time to closest approach. */
+    private void drawProjectileWarning(GuiGraphics g, Minecraft mc, int w, long now) {
+        List<CombatAIService.ProjectileThreat> incoming = CombatAIService.INSTANCE.projectileThreats();
+        if (incoming.isEmpty()) return;
+        CombatAIService.ProjectileThreat p = incoming.get(0); Font f = mc.font;
+        String line = "PROJECTILE " + p.label + " // " + p.direction + " // ETA "
+                + String.format(java.util.Locale.ROOT, "%.1fs", p.impactTicks / 20.0);
+        int color = p.impactTicks <= 8 ? 0xFFFF3030 : AMBER;
+        if (p.impactTicks <= 8 && (now / 180) % 2 != 0) color = 0xFFFFA000;
+        float scale = 0.68f; double x = w / 2.0 - textW(f, line, scale) / 2; double y = 43;
+        g.fill((int) (x - 5), (int) (y - 3), (int) (x + textW(f, line, scale) + 5), (int) (y + 10), 0xC0100808);
+        g.fill((int) (x - 5), (int) (y - 3), (int) (x - 3), (int) (y + 10), color);
+        text(g, f, line, x, y, scale, color);
+        if (incoming.size() > 1) {
+            String more = "+" + (incoming.size() - 1) + " ADDITIONAL PROJECTILE PATH(S)";
+            text(g, f, more, w / 2.0 - textW(f, more, 0.48f) / 2, y + 12, 0.48f, Config.text());
+        }
+    }
     // ---------------------------------------------------------------- reticle
     private void drawReticle(GuiGraphics g, TargetTracker t, long now) {
         long lockMs = now - t.lockSince;
