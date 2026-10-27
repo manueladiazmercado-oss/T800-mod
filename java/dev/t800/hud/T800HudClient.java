@@ -129,8 +129,6 @@ public class T800HudClient implements ClientModInitializer {
                     int top = (scaledHeight - 166) / 2;
                     int main = Config.main();
                     int dim = Config.dim();
-                    int panel = 0xB8080D14;
-                    graphics.fill(left - 3, top - 3, left + 179, top + 169, panel);
                     graphics.fill(left - 3, top - 3, left + 179, top - 2, main);
                     graphics.fill(left - 3, top + 168, left + 179, top + 169, dim);
                     graphics.fill(left - 3, top - 3, left - 2, top + 169, dim);
@@ -139,8 +137,7 @@ public class T800HudClient implements ClientModInitializer {
                     int[][] slots = {
                         {left + 7, top + 7, 18, 18}, {left + 7, top + 25, 18, 18},
                         {left + 7, top + 43, 18, 18}, {left + 7, top + 61, 18, 18},
-                        {left + 79, top + 17, 18, 18}, {left + 79, top + 35, 18, 18},
-                        {left + 79, top + 53, 18, 18}, {left + 79, top + 71, 18, 18},
+                        {left + 97, top + 17, 36, 36}, {left + 151, top + 26, 18, 18},
                         {left + 7, top + 83, 162, 54}, {left + 7, top + 141, 162, 18}
                     };
                     for (int[] slot : slots) {
