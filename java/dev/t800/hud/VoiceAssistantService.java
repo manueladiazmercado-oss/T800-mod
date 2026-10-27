@@ -215,12 +215,30 @@ public final class VoiceAssistantService {
         final String safe = text;
         try {
             String os = System.getProperty("os.name", "").toLowerCase(Locale.ROOT);
-            ProcessBuilder pb;
-            if (os.contains("mac")) pb = new ProcessBuilder("say", safe);
-            else if (os.contains("win")) pb = new ProcessBuilder("powershell", "-NoProfile", "-Command",
-                    "Add-Type -AssemblyName System.Speech; (New-Object System.Speech.Synthesis.SpeechSynthesizer).Speak('" + safe.replace("'","") + "')");
-            else pb = new ProcessBuilder("espeak", safe);
-            pb.redirectErrorStream(true); pb.start();
+            // The assistant normally answers in German, but may answer in English when the user does.
+            // Pick a matching installed speech voice instead of letting Windows read English with a German voice.
+            boolean english = looksEnglish(safe);
+            if (os.contains("win")) {
+                String culture = english ? "en-US" : "de-DE";
+                String script = "Add-Type -AssemblyName System.Speech; " +
+                        "$s=New-Object System.Speech.Synthesis.SpeechSynthesizer; " +
+                        "try {$s.SelectVoiceByHints([System.Speech.Synthesis.VoiceGender]::NotSet, " +
+                        "[System.Speech.Synthesis.VoiceAge]::NotSet, 0, [Globalization.CultureInfo]::GetCultureInfo('" + culture + "'))} catch {}; " +
+                        "$s.Speak('" + safe.replace("'","''") + "')";
+                new ProcessBuilder("powershell", "-NoProfile", "-Command", script).redirectErrorStream(true).start();
+            } else if (os.contains("mac")) {
+                // macOS chooses its installed default voice; language-specific voices can be configured in System Settings.
+                new ProcessBuilder("say", safe).redirectErrorStream(true).start();
+            } else {
+                new ProcessBuilder("espeak", "-v", english ? "en-us" : "de", safe).redirectErrorStream(true).start();
+            }
         } catch (Exception ex) { status = "TTS UNAVAILABLE // " + ex.getClass().getSimpleName(); }
+    }
+
+    private boolean looksEnglish(String text) {
+        String s = " " + text.toLowerCase(Locale.ROOT) + " ";
+        if (s.matches(".*\\b(the|this|that|with|you|your|enemy|target|health|confirmed|action|open|map|settings|night vision)\\b.*")) return true;
+        if (s.matches(".*\\b(der|die|das|und|nicht|bitte|dein|deine|ziel|gegner|leben|bestätigt|aktion|öffne|karte|einstellungen|nachtsicht)\\b.*")) return false;
+        return !s.matches(".*[äöüß].*");
     }
 }
