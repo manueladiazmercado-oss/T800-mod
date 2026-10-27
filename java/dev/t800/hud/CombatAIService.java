@@ -3,6 +3,7 @@ package dev.t800.hud;
 import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.client.Minecraft;
 import net.minecraft.world.entity.EquipmentSlot;
+import net.minecraft.world.entity.projectile.Projectile;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.monster.Enemy;
@@ -21,6 +22,7 @@ public final class CombatAIService {
     private final Map<Integer, Sample> samples = new HashMap<>();
     private final Map<String, Memory> memory = new HashMap<>();
     private final List<Threat> threats = new ArrayList<>();
+    private final List<ProjectileThreat> projectileThreats = new ArrayList<>();
     private long lastTick, lastVoice;
     private float lastPlayerHealth = -1;
     private boolean loaded;
@@ -32,6 +34,11 @@ public final class CombatAIService {
         Sample(LivingEntity e,long n){hp=e.getHealth();x=e.getX();z=e.getZ();seen=n;}
     }
     private static final class Memory { int seen,hits; String pattern="UNKNOWN"; }
+    public static final class ProjectileThreat {
+        public final Projectile entity; public final String label, direction; public final double impactTicks, closestDistance;
+        ProjectileThreat(Projectile e, String l, String dir, double ticks, double distance) { entity=e; label=l; direction=dir; impactTicks=ticks; closestDistance=distance; }
+        public String summary() { return label + " " + String.format(Locale.ROOT, "%.1fs", impactTicks / 20.0) + " " + direction; }
+    }
     public static final class Threat {
         public final LivingEntity entity; public final double score,distance; public final String pattern,advice;
         Threat(LivingEntity e,double s,double d,String p,String a){entity=e;score=s;distance=d;pattern=p;advice=a;}
@@ -41,6 +48,7 @@ public final class CombatAIService {
         long now=System.currentTimeMillis(); if(now-lastTick<100)return; lastTick=now; loadMemory();
         var p=mc.player; boolean hurt=lastPlayerHealth>=0&&p.getHealth()<lastPlayerHealth-.01f; lastPlayerHealth=p.getHealth();
         threats.clear();
+        analyzeProjectiles(mc, p);
         var list=mc.level.getEntitiesOfClass(LivingEntity.class,p.getBoundingBox().inflate(Math.min(48,Math.max(24,Config.range()))),e->e!=p&&e.isAlive()&&!e.isSpectator());
         LivingEntity likely=null; double nearest=Double.MAX_VALUE;
         for(LivingEntity e:list){
@@ -71,6 +79,45 @@ public final class CombatAIService {
         if(Float.isNaN(p.getHealth())||p.getMaxHealth()<=0)issues.add("HEALTH SENSOR INVALID");
         diagnosis=issues.isEmpty()?"SELF-CHECK OK • "+threats.size()+" THREATS • "+memory.size()+" TYPES":"CHECK: "+String.join(" / ",issues);
         voice(mc,now);
+    }
+    /** Short-range trajectory estimate using current velocity and approximate gravity. */
+    private void analyzeProjectiles(Minecraft mc, Player player) {
+        projectileThreats.clear();
+        var nearby = mc.level.getEntitiesOfClass(Projectile.class, player.getBoundingBox().inflate(40.0),
+                projectile -> projectile.isAlive() && projectile.getOwner() != player);
+        for (Projectile projectile : nearby) {
+            String id = projectile.getType().toString().toLowerCase(Locale.ROOT);
+            String label = id.contains("arrow") ? "ARROW" : id.contains("trident") ? "TRIDENT"
+                    : id.contains("fireball") ? "FIREBALL" : id.contains("snowball") ? "SNOWBALL"
+                    : id.contains("egg") ? "EGG" : id.contains("potion") ? "POTION"
+                    : id.contains("wind_charge") ? "WIND CHARGE" : "PROJECTILE";
+            var velocity = projectile.getDeltaMovement(); var playerVelocity = player.getDeltaMovement();
+            double gravity = projectile.isNoGravity() ? 0.0 :
+                    id.contains("arrow") || id.contains("trident") ? 0.05 :
+                    id.contains("snowball") || id.contains("egg") || id.contains("potion") ? 0.03 :
+                    id.contains("fireball") ? 0.0 : 0.03;
+            double closest = Double.MAX_VALUE; int closestTick = 0;
+            for (int tick = 1; tick <= 30; tick++) {
+                double px = projectile.getX() + velocity.x * tick;
+                double py = projectile.getY() + velocity.y * tick - gravity * tick * (tick + 1) * 0.5;
+                double pz = projectile.getZ() + velocity.z * tick;
+                double sx = player.getX() + playerVelocity.x * tick;
+                double sy = player.getY() + playerVelocity.y * tick; double sz = player.getZ() + playerVelocity.z * tick;
+                double dx = px - sx, dy = py - (sy + player.getBbHeight() * 0.55), dz = pz - sz;
+                double distance = Math.sqrt(dx * dx + dy * dy + dz * dz);
+                if (distance < closest) { closest = distance; closestTick = tick; }
+            }
+            if (closest > 2.3 || closestTick == 0) continue;
+            double dx = projectile.getX() - player.getX(), dz = projectile.getZ() - player.getZ();
+            double yaw = Math.toRadians(player.getYRot());
+            double forward = dx * -Math.sin(yaw) + dz * Math.cos(yaw);
+            double right = dx * Math.cos(yaw) + dz * Math.sin(yaw);
+            double angle = Math.toDegrees(Math.atan2(right, forward));
+            String direction = Math.abs(angle) > 135 ? "BEHIND" : angle < -35 ? "LEFT" : angle > 35 ? "RIGHT" : "AHEAD";
+            projectileThreats.add(new ProjectileThreat(projectile, label, direction, closestTick, closest));
+        }
+        projectileThreats.sort(Comparator.comparingDouble((ProjectileThreat t) -> t.impactTicks).thenComparingDouble(t -> t.closestDistance));
+        if (projectileThreats.size() > 4) projectileThreats.subList(4, projectileThreats.size()).clear();
     }
     private double score(LivingEntity e,double d,double speed,String pattern){
         double hp=Math.sqrt(Math.max(1,e.getMaxHealth()))*3, attack=0;
@@ -114,6 +161,7 @@ public final class CombatAIService {
             else b=new ProcessBuilder("espeak",msg);b.redirectErrorStream(true);b.start();}catch(Exception ignored){}},"t800-voice");th.setDaemon(true);th.start();
     }
     public List<Threat> threats(){return List.copyOf(threats);}
+    public List<ProjectileThreat> projectileThreats(){return List.copyOf(projectileThreats);}
     public String advice(){return advice;}
     public String diagnosis(){return diagnosis;}
     public int rememberedTypes(){return memory.size();}
