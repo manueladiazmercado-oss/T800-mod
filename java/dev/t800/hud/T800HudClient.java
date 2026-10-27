@@ -124,7 +124,9 @@ public class T800HudClient implements ClientModInitializer {
         // Style the vanilla hotbar/inventory without replacing Minecraft's item handling.
         ScreenEvents.AFTER_INIT.register((client, screen, scaledWidth, scaledHeight) -> {
             if (screen instanceof InventoryScreen) {
-                screen.addRenderableOnly((graphics, mouseX, mouseY, delta) -> {
+                // Screen.addRenderableOnly is protected in the targeted Minecraft version.
+                // Use Fabric's per-screen render event instead, preserving vanilla inventory handling.
+                ScreenEvents.afterRender(screen).register((renderedScreen, graphics, mouseX, mouseY, delta) -> {
                     int left = (scaledWidth - 176) / 2;
                     int top = (scaledHeight - 166) / 2;
                     int main = Config.main();
