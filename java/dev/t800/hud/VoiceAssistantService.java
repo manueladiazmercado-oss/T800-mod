@@ -210,27 +210,38 @@ public final class VoiceAssistantService {
         mc.execute(() -> { if (mc.player != null) mc.player.displayClientMessage(Component.literal(message), false); });
     }
     private void speak(String message) {
-        String text = message.replaceAll("[^\\p{L}\\p{N} .,;:!?'-]", " ");
+        String text = message.replaceAll("[^\\p{L}\\p{N} .,;:!?'-]", " ")
+                .replaceAll("\\s{2,}", " ").trim();
+        if (text.isBlank()) return;
         if (text.length() > 500) text = text.substring(0, 500);
         final String safe = text;
         try {
             String os = System.getProperty("os.name", "").toLowerCase(Locale.ROOT);
-            // The assistant normally answers in German, but may answer in English when the user does.
-            // Pick a matching installed speech voice instead of letting Windows read English with a German voice.
             boolean english = looksEnglish(safe);
             if (os.contains("win")) {
                 String culture = english ? "en-US" : "de-DE";
+                // System.Speech uses the best matching installed voice; a missing locale falls back to Windows' default.
                 String script = "Add-Type -AssemblyName System.Speech; " +
-                        "$s=New-Object System.Speech.Synthesis.SpeechSynthesizer; " +
+                        "$s=New-Object System.Speech.Synthesis.SpeechSynthesizer; $s.Rate=-1; $s.Volume=100; " +
                         "try {$s.SelectVoiceByHints([System.Speech.Synthesis.VoiceGender]::NotSet, " +
                         "[System.Speech.Synthesis.VoiceAge]::NotSet, 0, [Globalization.CultureInfo]::GetCultureInfo('" + culture + "'))} catch {}; " +
                         "$s.Speak('" + safe.replace("'","''") + "')";
                 new ProcessBuilder("powershell", "-NoProfile", "-Command", script).redirectErrorStream(true).start();
             } else if (os.contains("mac")) {
-                // macOS chooses its installed default voice; language-specific voices can be configured in System Settings.
-                new ProcessBuilder("say", safe).redirectErrorStream(true).start();
+                // Prefer a native voice for the detected language, but fall back to the user's default voice.
+                String preferred = english ? "Samantha" : "Anna";
+                String voice = preferred;
+                try {
+                    Process list = new ProcessBuilder("say", "-v", "?").redirectErrorStream(true).start();
+                    String voices = new String(list.getInputStream().readAllBytes(), StandardCharsets.UTF_8);
+                    list.waitFor(2, TimeUnit.SECONDS);
+                    if (!voices.contains(preferred)) voice = "";
+                } catch (Exception ignored) { voice = ""; }
+                if (voice.isEmpty()) new ProcessBuilder("say", "-r", "175", safe).redirectErrorStream(true).start();
+                else new ProcessBuilder("say", "-v", voice, "-r", "175", safe).redirectErrorStream(true).start();
             } else {
-                new ProcessBuilder("espeak", "-v", english ? "en-us" : "de", safe).redirectErrorStream(true).start();
+                new ProcessBuilder("espeak", "-s", "155", "-v", english ? "en-us" : "de", safe)
+                        .redirectErrorStream(true).start();
             }
         } catch (Exception ex) { status = "TTS UNAVAILABLE // " + ex.getClass().getSimpleName(); }
     }
