@@ -585,7 +585,7 @@ public class HudRenderer implements HudElement {
 
         int x = 8;
         int panelW = Math.min(218, Math.max(174, screenW / 3));
-        int panelH = Math.min(178, screenH - 24);
+        int panelH = Math.min(205, screenH - 24);
         int y = Math.max(72, Math.min(screenH - panelH - 8, screenH / 2 - panelH / 2));
         g.fill(x, y, x + panelW, y + panelH, 0xD0091018);
         g.fill(x, y, x + 2, y + panelH, Config.main());
@@ -634,7 +634,7 @@ public class HudRenderer implements HudElement {
                 String.format("OBSERVED DPS %.1f", tracker.estimatedDps),
                 String.format("THREAT %02.0f/100  %s", targetScore, rank),
                 String.format(Config.terminationV2 ? "TERM. EST. 2.0 %02.0f%%" : "TERM. BASIC %02.0f%%", termChance),
-                "OUTLOOK " + chanceLabel,
+                "OUTLOOK " + chanceLabel,\n                "MODE " + OpponentIntelService.detectMode(mc),\n                target instanceof Player ? OpponentIntelService.INSTANCE.profile().hudLine() : "PROFILE: NOT A PLAYER",
                 Config.terminationV2 ? "ESTIMATE: HP / GEAR / FOOD / RANGE" : "BASIC HEURISTIC — NOT A WIN ODDS",
                 Config.adaptiveCombatAI ? "TACTIC " + ai.advice() : "TACTIC MODULE OFF",
                 Config.combatMemory ? "MEMORY " + ai.memory(target) : "MEMORY MODULE OFF",
