@@ -89,7 +89,7 @@ tasks.register("generateT800ElytraPack") {
             g.setColor(c(pulse, 15, 20)); g.fillRect(32, 10, 1, 8)
             g.setColor(c(100, 100, 110)); g.drawLine(28, 9, 30, 11); g.drawLine(36, 9, 34, 11)
             g.setColor(c(pulse, 18, 18)); g.fillRect(29, 22, 2, 4); g.fillRect(34, 22, 2, 4)
-            g.setColor(c(255, Math.max(25, (int)(pulse / 4)), Math.max(25, pulse / 4))); g.drawLine(29, 23, 29, 24); g.drawLine(34, 23, 34, 24)
+            g.setColor(c(255, Math.max(25, (int)(pulse / 4)), Math.max(25, (int)(pulse / 4)))); g.drawLine(29, 23, 29, 24); g.drawLine(34, 23, 34, 24)
             g.translate(0, -y0)
         }
         g.dispose()
