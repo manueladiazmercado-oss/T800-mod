@@ -26,7 +26,7 @@ public final class CombatAIService {
     private boolean loaded;
     private String advice = "Acquire a target to begin analysis.";
     private String diagnosis = "SELF-CHECK: WAITING";
-    private int encounters;
+    private int encounters, lastTargetId = Integer.MIN_VALUE;
     private static final class Sample {
         float hp; double x,z; long seen; int ticks; String pattern="OBSERVING";
         Sample(LivingEntity e,long n){hp=e.getHealth();x=e.getX();z=e.getZ();seen=n;}
@@ -60,9 +60,11 @@ public final class CombatAIService {
         if(likely!=null){Memory m=memory.computeIfAbsent(key(likely),k->new Memory());m.hits++;m.pattern=samples.get(likely.getId()).pattern;saveMemory();}
         LivingEntity target=T800HudClient.TRACKER.target;
         for(Threat t:threats)if(t.entity==target){advice=t.advice+" ["+t.pattern+"]";break;}
-        if(target!=null&&target.isAlive()){
-            Sample s=samples.get(target.getId());
-            if(s!=null&&s.ticks==1){Memory m=memory.computeIfAbsent(key(target),k->new Memory());m.seen++;m.pattern=s.pattern;encounters++;saveMemory();}
+        if(target==null || !target.isAlive()) lastTargetId = Integer.MIN_VALUE;
+        else if(target.getId()!=lastTargetId){
+            Memory m=memory.computeIfAbsent(key(target),k->new Memory());
+            m.seen++; Sample sample=samples.get(target.getId()); if(sample!=null)m.pattern=sample.pattern;
+            encounters++; lastTargetId=target.getId(); saveMemory();
         }
         samples.entrySet().removeIf(e->now-e.getValue().seen>30000);
         List<String> issues=new ArrayList<>(); if(!Config.hud)issues.add("HUD DISABLED");if(!Config.combatAnalytics)issues.add("ANALYTICS DISABLED");
