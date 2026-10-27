@@ -31,7 +31,8 @@ public class SettingsScreen extends Screen {
         opts.add(new Opt("Infrared Vision [I]", () -> onOff(Config.infraredVision), () -> Config.infraredVision = !Config.infraredVision));
         opts.add(new Opt("Terminator Vision", () -> onOff(Config.vision), () -> Config.vision = !Config.vision));
         opts.add(new Opt("Custom Bars", () -> onOff(Config.customBars), () -> Config.customBars = !Config.customBars));
-        opts.add(new Opt("Target Mode", () -> T800HudClient.TRACKER.mode.name(), () -> T800HudClient.TRACKER.cycleMode()));\n        opts.add(new Opt("PvP Profile [F7]", () -> Config.pvpMode, () -> { String[] modes = {"AUTO", "SMP", "CRYSTAL", "SWORD", "AXE", "POT", "UHC", "PVP CLUB"}; int n = 0; for (int i = 0; i < modes.length; i++) if (modes[i].equalsIgnoreCase(Config.pvpMode)) n = (i + 1) % modes.length; Config.pvpMode = modes[n]; }));
+        opts.add(new Opt("Target Mode", () -> T800HudClient.TRACKER.mode.name(), () -> T800HudClient.TRACKER.cycleMode()));
+        opts.add(new Opt("PvP Profile [F7]", () -> Config.pvpMode, () -> { String[] modes = {"AUTO", "SMP", "CRYSTAL", "SWORD", "AXE", "POT", "UHC", "PVP CLUB"}; int n = 0; for (int i = 0; i < modes.length; i++) if (modes[i].equalsIgnoreCase(Config.pvpMode)) n = (i + 1) % modes.length; Config.pvpMode = modes[n]; }));
         opts.add(new Opt("Target Range", () -> Config.RANGES[Config.rangeIdx] + "m", () -> Config.rangeIdx = (Config.rangeIdx + 1) % Config.RANGES.length));
         opts.add(new Opt("Lock Cone", () -> Config.CONES[Config.coneIdx], () -> Config.coneIdx = (Config.coneIdx + 1) % Config.CONES.length));
         opts.add(new Opt("Text Size", () -> Config.SIZES[Config.sizeIdx], () -> Config.sizeIdx = (Config.sizeIdx + 1) % Config.SIZES.length));
