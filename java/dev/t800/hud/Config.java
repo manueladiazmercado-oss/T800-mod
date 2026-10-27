@@ -22,7 +22,7 @@ public final class Config {
     public static int theme = 0, rangeIdx = 1, coneIdx = 1, sizeIdx = 1;
     public static boolean hasDeathLocation = false;
     public static int deathX, deathY, deathZ;
-    public static String mode = "ALL";
+    public static String mode = "ALL";\n    public static String pvpMode = "AUTO";
 
     public static final String[] THEMES = {"T-800 RED", "CYBER BLUE", "MATRIX GREEN", "AMBER"};
     private static final int[] THEME_RGB = {0xFF2020, 0x20B8FF, 0x20FF60, 0xFFA000};
@@ -95,7 +95,7 @@ public final class Config {
             damageFlash = b(p, "damageFlash", true); sounds = b(p, "sounds", true);
             theme = i(p, "theme", 0, THEMES.length - 1); rangeIdx = i(p, "rangeIdx", 1, RANGES.length - 1);
             coneIdx = i(p, "coneIdx", 1, CONES.length - 1); sizeIdx = i(p, "sizeIdx", 1, SIZES.length - 1);
-            mode = p.getProperty("mode", "ALL");
+            mode = p.getProperty("mode", "ALL");\n            pvpMode = p.getProperty("pvpMode", "AUTO");
             hasDeathLocation = b(p, "hasDeathLocation", false);
             deathX = signed(p, "deathX", 0);
             deathY = signed(p, "deathY", 0);
@@ -125,7 +125,7 @@ public final class Config {
             p.setProperty("sounds", String.valueOf(sounds));
             p.setProperty("theme", String.valueOf(theme)); p.setProperty("rangeIdx", String.valueOf(rangeIdx));
             p.setProperty("coneIdx", String.valueOf(coneIdx)); p.setProperty("sizeIdx", String.valueOf(sizeIdx));
-            p.setProperty("mode", mode);
+            p.setProperty("mode", mode);\n            p.setProperty("pvpMode", pvpMode);
             p.setProperty("hasDeathLocation", String.valueOf(hasDeathLocation));
             p.setProperty("deathX", String.valueOf(deathX));
             p.setProperty("deathY", String.valueOf(deathY));
