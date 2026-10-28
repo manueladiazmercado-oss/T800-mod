@@ -1,7 +1,7 @@
 package dev.t800.hud;
 
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphics;\nimport net.minecraft.client.input.CharacterEvent;\nimport net.minecraft.client.input.KeyEvent;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
@@ -59,16 +59,25 @@ public final class TargetDossierScreen extends Screen {
         return TargetDossierService.INSTANCE.recentDossiers(0).stream().filter(d -> q.isEmpty() || d.name.toLowerCase(Locale.ROOT).contains(q) || d.uuid.toLowerCase(Locale.ROOT).contains(q) || d.server.toLowerCase(Locale.ROOT).contains(q)).toList();
     }
 
-    @Override public boolean charTyped(char chr, int modifiers) {
-        if (!Character.isISOControl(chr)) { searchQuery += chr; page = 0; selectedUuid = ""; return true; }
-        return super.charTyped(chr, modifiers);
+    @Override public boolean charTyped(CharacterEvent event) {
+        int codePoint = event.codepoint();
+        if (!Character.isISOControl(codePoint)) {
+            searchQuery += new String(Character.toChars(codePoint));
+            page = 0;
+            selectedUuid = "";
+            return true;
+        }
+        return super.charTyped(event);
     }
 
-    @Override public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
-        if (keyCode == 256) { onClose(); return true; }
-        if (keyCode == 259 && !searchQuery.isEmpty()) { searchQuery = searchQuery.substring(0, searchQuery.length()-1); page = 0; selectedUuid = ""; return true; }
-        if (keyCode == 261) { searchQuery = ""; page = 0; selectedUuid = ""; return true; }
-        return super.keyPressed(keyCode, scanCode, modifiers);
+    @Override public boolean keyPressed(KeyEvent event) {
+        if (event.key() == 256) { onClose(); return true; }
+        if (event.key() == 259 && !searchQuery.isEmpty()) {
+            searchQuery = searchQuery.substring(0, searchQuery.offsetByCodePoints(searchQuery.length(), -1));
+            page = 0; selectedUuid = ""; return true;
+        }
+        if (event.key() == 261) { searchQuery = ""; page = 0; selectedUuid = ""; return true; }
+        return super.keyPressed(event);
     }
 
     private void line(GuiGraphics g, String text, int x, int y, float scale, int color) {
