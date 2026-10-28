@@ -22,7 +22,7 @@ public final class TargetDossierScreen extends Screen {
     @Override
     protected void init() {
         addRenderableWidget(Button.builder(Component.literal("PREVIOUS"), b -> {
-            List<TargetDossierService.Dossier> all = TargetDossierService.INSTANCE.recentDossiers(500);
+            List<TargetDossierService.Dossier> all = TargetDossierService.INSTANCE.recentDossiers(0);
             if (!all.isEmpty()) {
                 page = (page + 1) % all.size();
                 selectedUuid = all.get(page).uuid;
@@ -35,6 +35,11 @@ public final class TargetDossierScreen extends Screen {
                 selectedUuid = all.get(page).uuid;
             }
         }).bounds(112, height - 28, 90, 20).build());
+        addRenderableWidget(Button.builder(Component.literal("OPEN REPLAY"), b -> {
+            TargetDossierService.Dossier d = TargetDossierService.INSTANCE.recentDossiers(0).stream()
+                    .filter(p -> p.uuid.equals(selectedUuid)).findFirst().orElse(null);
+            if (d != null) minecraft.setScreen(new CombatReplayScreen(d.uuid));
+        }).bounds(210, height - 28, 108, 20).build());
         addRenderableWidget(Button.builder(Component.literal("CLOSE"), b -> onClose())
                 .bounds(width - 96, height - 28, 80, 20).build());
     }
@@ -73,6 +78,7 @@ public final class TargetDossierScreen extends Screen {
             line(g, "IDENTITY // " + safe(d.name, 26), left, y, 0.75f, Config.main()); y += 15;
             line(g, "UUID " + safe(d.uuid, 36), left, y, 0.42f, Config.dim()); y += 12;
             line(g, "SIGHTINGS " + d.sightings + "   TARGET LOCKS " + d.observedLocks, left, y, 0.55f, Config.text()); y += 12;
+            line(g, "REPLAYS " + d.replayCount + "   RECORDED FRAMES IN LATEST FILE", left, y, 0.44f, Config.dim()); y += 11;
             line(g, "OBSERVED TARGET HP LOSS " + String.format(Locale.ROOT, "%.1f", d.observedTargetHealthLoss), left, y, 0.52f, Config.text()); y += 11;
             line(g, "SELF HP LOSS WHILE TRACKED " + String.format(Locale.ROOT, "%.1f", d.observedSelfHealthLoss), left, y, 0.52f, Config.text()); y += 11;
             line(g, "HP-DROP EVENTS " + d.observedHealthDrops + "   DAMAGE EVENTS " + d.observedDamageTakenEvents, left, y, 0.48f, Config.text()); y += 13;
@@ -100,7 +106,7 @@ public final class TargetDossierScreen extends Screen {
                 if (ey > height - 48) break;
             }
         }
-        line(g, "P DOSSIER  |  F4 COMBAT ANALYTICS  |  F8 TERMINATION MODE", 16, height - 39, 0.42f, Config.dim());
+        line(g, "P DOSSIER  |  OPEN REPLAY TO REVIEW MOVEMENT TRACE", 16, height - 39, 0.42f, Config.dim());
     }
 
     @Override
