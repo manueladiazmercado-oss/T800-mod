@@ -29,7 +29,7 @@ public final class TargetDossierScreen extends Screen {
             }
         }).bounds(16, height - 28, 90, 20).build());
         addRenderableWidget(Button.builder(Component.literal("NEXT"), b -> {
-            List<TargetDossierService.Dossier> all = TargetDossierService.INSTANCE.recentDossiers(500);
+            List<TargetDossierService.Dossier> all = TargetDossierService.INSTANCE.recentDossiers(0);
             if (!all.isEmpty()) {
                 page = Math.floorMod(page - 1, all.size());
                 selectedUuid = all.get(page).uuid;
@@ -63,7 +63,7 @@ public final class TargetDossierScreen extends Screen {
         line(g, "T-800 // TARGET DOSSIER", left, top, 0.9f, Config.main());
         line(g, "LOCAL OBSERVATIONS ONLY // NO SERVER DATA EXTRACTION", left, top + 13, 0.42f, Config.dim());
 
-        List<TargetDossierService.Dossier> profiles = TargetDossierService.INSTANCE.recentDossiers(500);
+        List<TargetDossierService.Dossier> profiles = TargetDossierService.INSTANCE.recentDossiers(0);
         TargetDossierService.Dossier d = profiles.stream().filter(p -> p.uuid.equals(selectedUuid)).findFirst().orElse(null);
         if (d == null && !profiles.isEmpty()) {
             d = profiles.get(0);
