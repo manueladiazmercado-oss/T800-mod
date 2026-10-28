@@ -13,8 +13,8 @@ import java.util.*;
 import java.util.concurrent.*;
 
 /**
- * Optional voice bridge: hold the configured key to record, whisper.cpp transcribes,
- * Ollama answers locally, and OS TTS reads the answer. All expensive work is off-thread.
+ * Optional voice bridge: hold the configured key to record, Whisper.cpp transcribes,
+ * the mod's local tactical systems compose an answer, and OS TTS reads it. Work runs off-thread.
  */
 public final class VoiceAssistantService {
     public static final VoiceAssistantService INSTANCE = new VoiceAssistantService();
@@ -100,7 +100,7 @@ public final class VoiceAssistantService {
                 appendMemory("YOU: " + prompt + "\nPROPOSED ACTION: " + action.get());
                 return;
             }
-            String answer = answerLocally(prompt, mc, snapshot(mc));
+            String answer = answerLocally(prompt, mc);
             lastAnswer = answer; status = "ONLINE // LOCAL TACTICAL CORE";
             appendMemory("YOU: " + prompt + "\nT-800: " + answer);
             post(mc, "T-800 ▶ " + answer);
@@ -115,7 +115,7 @@ public final class VoiceAssistantService {
      * Uses the mod's own local tactical systems only. No Ollama, cloud API, or external
      * language model is called; the response is composed from live CombatAIService data.
      */
-    private String answerLocally(String prompt, Minecraft mc, String gameState) {
+    private String answerLocally(String prompt, Minecraft mc) {
         String q = prompt.toLowerCase(Locale.ROOT);
         var player = mc.player;
         if (player == null || mc.level == null) return "No world is currently loaded.";
@@ -176,23 +176,6 @@ public final class VoiceAssistantService {
     private boolean containsAny(String text, String... terms) {
         for (String term : terms) if (text.contains(term)) return true;
         return false;
-    }
-
-    private String snapshot(Minecraft mc) {
-        if (mc.player == null || mc.level == null) return "No world loaded.";
-        var p = mc.player;
-        String target = T800HudClient.TRACKER.target == null ? "none" :
-                T800HudClient.TRACKER.target.getType().toString() + ", health " +
-                String.format(Locale.ROOT, "%.1f/%.1f", T800HudClient.TRACKER.target.getHealth(), T800HudClient.TRACKER.target.getMaxHealth());
-        String projectiles = CombatAIService.INSTANCE.projectileThreats().stream().limit(3)
-                .map(CombatAIService.ProjectileThreat::summary).reduce((a,b)->a+"; "+b).orElse("none");
-        String threat = CombatAIService.INSTANCE.threats().stream().limit(3)
-                .map(t -> t.entity.getType()+ " score "+Math.round(t.score)+" distance "+Math.round(t.distance))
-                .reduce((a,b)->a+"; "+b).orElse("none");
-        return "dimension="+mc.level.dimension().identifier()+", xyz="+p.blockPosition()+", health="+
-                String.format(Locale.ROOT,"%.1f/%.1f",p.getHealth(),p.getMaxHealth())+", hunger="+p.getFoodData().getFoodLevel()+
-                ", armor durability="+CombatAIService.INSTANCE.armorDurability(p)+"%, target="+target+
-                ", threats="+threat+", incoming projectiles="+projectiles;
     }
 
     private Optional<String> detectAction(String text) {
