@@ -83,7 +83,7 @@ public final class TargetDossierService {
         Dossier d = dossiers.computeIfAbsent(uuid, k -> {
             Dossier fresh = new Dossier();
             fresh.uuid = k;
-            fresh.name = player.getGameProfile().name();
+            fresh.name = player.getName().getString();
             fresh.firstSeen = now;
             return fresh;
         });
