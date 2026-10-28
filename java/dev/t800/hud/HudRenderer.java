@@ -8,6 +8,8 @@ import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.client.renderer.RenderPipelines;
 import net.minecraft.core.component.DataComponents;
+import net.minecraft.core.BlockPos;
+import net.minecraft.world.level.ClipContext;
 import net.minecraft.resources.Identifier;
 import net.minecraft.util.Mth;
 import net.minecraft.world.effect.MobEffectInstance;
@@ -80,6 +82,7 @@ public class HudRenderer implements HudElement {
         double yEnd = 8;
         if (Config.showStatus) yEnd = drawStatusPanel(g, mc, w, now);
         if (Config.showEffects && !Config.performanceProfile) drawEffects(g, mc, w, yEnd + 4);
+        if (mc.player.isFallFlying() && !Config.performanceProfile) drawFlightAssist(g, mc, w, h);
         drawWarnings(g, mc, w, h, now);
         drawProjectileWarning(g, mc, w, now);
         if (Config.customBars && survival(mc)) drawBars(g, mc, w, h, now);
@@ -527,10 +530,59 @@ public class HudRenderer implements HudElement {
                     : String.format("%d:%02d", e.getDuration() / 1200, (e.getDuration() / 20) % 60);
             String line = name + lvl + "  " + time;
             int col = e.getEffect().value().isBeneficial() ? Config.text() : 0xFFFF6040;
-            text(g, f, line, w - 8 - textW(f, line, s), y, s, col);
+            int textX = w - 8 - textW(f, line, s);
+            int iconX = Math.max(2, textX - 7);
+            // Compact effect glyphs stay visible in the open world, not only in inventory.
+            g.fill(iconX, (int) y - 1, iconX + 5, (int) y + 4, 0xCC071019);
+            g.fill(iconX, (int) y - 1, iconX + 1, (int) y + 4, col);
+            text(g, f, name.substring(0, 1), iconX + 1, y - 0.4, 0.38f, col);
+            text(g, f, line, textX, y, s, col);
             y += lh;
             n++;
         }
+    }
+
+    /**
+     * Lightweight in-flight collision forecast. It samples the current Elytra velocity
+     * and nearby loaded block collision shapes only; it never loads chunks or changes movement.
+     */
+    private void drawFlightAssist(GuiGraphics g, Minecraft mc, int w, int h) {
+        LocalPlayer p = mc.player;
+        if (p == null || mc.level == null || !p.isFallFlying()) return;
+        Vec3 start = p.position().add(0, p.getBbHeight() * 0.55, 0);
+        Vec3 velocity = p.getDeltaMovement();
+        double speed = velocity.length();
+        Vec3 direction = speed > 0.08 ? velocity.normalize() : p.getLookAngle();
+        String warning = "FLIGHT PATH // SCANNING";
+        int color = Config.main();
+        for (int tick = 1; tick <= 40; tick++) {
+            double t = tick;
+            Vec3 point = start.add(direction.scale(Math.max(0.35, speed) * t))
+                    .add(0, -0.0035 * t * t, 0);
+            BlockPos pos = BlockPos.containing(point);
+            if (!mc.level.hasChunkAt(pos)) {
+                warning = "FLIGHT PATH // CHUNK DATA UNKNOWN";
+                color = AMBER;
+                break;
+            }
+            var state = mc.level.getBlockState(pos);
+            if (!state.getCollisionShape(mc.level, pos).isEmpty()) {
+                double distance = start.distanceTo(point);
+                warning = "OBSTACLE // " + state.getBlock().getName().getString().toUpperCase() +
+                        " // " + String.format(java.util.Locale.ROOT, "%.1fM", distance);
+                color = 0xFFFF6040;
+                break;
+            }
+            if (tick == 40) {
+                warning = "FLIGHT PATH // CLEAR ~" +
+                        String.format(java.util.Locale.ROOT, "%.1fM", start.distanceTo(point));
+            }
+        }
+        int x = Math.max(6, w / 2 - 100), y = Math.max(28, h / 5);
+        g.fill(x - 5, y - 4, x + 205, y + 17, 0xB0081018);
+        g.fill(x - 5, y - 4, x + 205, y - 3, color);
+        text(g, mc.font, "T-800 // FLIGHT ASSIST", x, y, 0.62f, Config.main());
+        text(g, mc.font, warning, x, y + 8, 0.52f, color);
     }
 
     // ---------------------------------------------------------------- T-800 survival systems: segmented health, armor, power, oxygen
