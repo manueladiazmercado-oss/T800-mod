@@ -7,14 +7,10 @@ import net.minecraft.network.chat.Component;
 
 import javax.sound.sampled.*;
 import java.io.*;
-import java.net.URI;
-import java.net.http.*;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.*;
-import java.time.Duration;
 import java.util.*;
 import java.util.concurrent.*;
-import java.util.regex.*;
 
 /**
  * Optional voice bridge: hold the configured key to record, whisper.cpp transcribes,
@@ -25,7 +21,6 @@ public final class VoiceAssistantService {
     private final ExecutorService worker = Executors.newSingleThreadExecutor(r -> {
         Thread t = new Thread(r, "t800-assistant"); t.setDaemon(true); return t;
     });
-    private final HttpClient http = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(3)).build();
     private volatile boolean recording;
     private volatile TargetDataLine line;
     private volatile String status = "READY // HOLD F10 TO TALK";
@@ -35,8 +30,6 @@ public final class VoiceAssistantService {
     private Path modelPath() { return FabricLoader.getInstance().getConfigDir().resolve("t800hud/ggml-base.bin"); }
     private Path memoryPath() { return FabricLoader.getInstance().getConfigDir().resolve("t800hud-assistant-memory.txt"); }
     private String whisperCommand() { return System.getProperty("t800.whisper.command", "whisper-cli"); }
-    private String ollamaUrl() { return System.getProperty("t800.ollama.url", "http://127.0.0.1:11434/api/chat"); }
-    private String ollamaModel() { return System.getProperty("t800.ollama.model", "qwen2.5:3b"); }
 
     public String status() { return status; }
     public String lastAnswer() { return lastAnswer; }
@@ -249,12 +242,6 @@ public final class VoiceAssistantService {
             return String.join("\n", lines.subList(Math.max(0, lines.size()-24), lines.size()));
         } catch (Exception ignored) { return "(memory unavailable)"; }
     }
-    private static String json(String s) {
-        return s.replace("\\","\\\\").replace("\"","\\\"").replace("\n","\\n").replace("\r","\\r").replace("\t","\\t");
-    }
-    private static String unjson(String s) {
-        return s.replace("\\n","\n").replace("\\r","\r").replace("\\t","\t").replace("\\\"","\"").replace("\\\\","\\");
-    }
     private void post(Minecraft mc, String message) {
         mc.execute(() -> { if (mc.player != null) mc.player.displayClientMessage(Component.literal(message), false); });
     }
@@ -293,10 +280,4 @@ public final class VoiceAssistantService {
         tts.start();
     }
 
-    private boolean looksEnglish(String text) {
-        String s = " " + text.toLowerCase(Locale.ROOT) + " ";
-        if (s.matches(".*\\b(the|this|that|with|you|your|enemy|target|health|confirmed|action|open|map|settings|night vision)\\b.*")) return true;
-        if (s.matches(".*\\b(der|die|das|und|nicht|bitte|dein|deine|ziel|gegner|leben|bestätigt|aktion|öffne|karte|einstellungen|nachtsicht)\\b.*")) return false;
-        return !s.matches(".*[äöüß].*");
-    }
 }
