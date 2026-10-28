@@ -77,17 +77,17 @@ public final class VoiceAssistantService {
         try {
             if (!Files.exists(modelPath())) {
                 status = "WHISPER MODEL MISSING";
-                post(mc, "T-800: Für Spracheingabe fehlt " + modelPath() + ". Lege dort ein Whisper-.cpp-Modell wie ggml-base.bin ab.");
+                post(mc, "T-800: Speech input model missing: " + modelPath() + ". Place a Whisper.cpp model such as ggml-base.bin there.");
                 return;
             }
             Process process = new ProcessBuilder(whisperCommand(), "-m", modelPath().toString(),
                     "-f", recordingPath().toString(), "-nt").redirectErrorStream(true).start();
             boolean ended = process.waitFor(90, TimeUnit.SECONDS);
-            if (!ended) { process.destroyForcibly(); status = "STT TIMEOUT"; post(mc, "T-800: Spracherkennung hat zu lange gebraucht."); return; }
+            if (!ended) { process.destroyForcibly(); status = "STT TIMEOUT"; post(mc, "T-800: Speech recognition timed out."); return; }
             String transcript = new String(process.getInputStream().readAllBytes(), StandardCharsets.UTF_8).trim();
             if (process.exitValue() != 0 || transcript.isBlank()) {
                 status = "SPEECH NOT RECOGNIZED";
-                post(mc, "T-800: Sprache nicht erkannt. Prüfe whisper-cli und das Modell.");
+                post(mc, "T-800: Speech was not recognized. Check whisper-cli and the Whisper model.");
                 return;
             }
             // whisper-cli prints progress lines too; keep the final text-like lines.
@@ -95,7 +95,7 @@ public final class VoiceAssistantService {
                     && !s.startsWith("main:") && !s.startsWith("system_info:") && !s.startsWith("ggml_"))
                     .reduce((a,b) -> b).orElse("").replaceAll("^\\[[^]]*]\\s*", "").trim();
             final String prompt = transcript;
-            status = "ASKING LOCAL MODEL...";
+            status = "LOCAL TACTICAL CORE...";
             post(mc, "YOU ▶ " + prompt);
             Optional<String> action = detectAction(prompt);
             if (action.isPresent()) {
@@ -106,34 +106,82 @@ public final class VoiceAssistantService {
                 appendMemory("YOU: " + prompt + "\nPROPOSED ACTION: " + action.get());
                 return;
             }
-            String answer = askOllama(prompt, snapshot(mc));
-            lastAnswer = answer; status = "ONLINE // LOCAL LLM";
+            String answer = answerLocally(prompt, mc, snapshot(mc));
+            lastAnswer = answer; status = "ONLINE // LOCAL TACTICAL CORE";
             appendMemory("YOU: " + prompt + "\nT-800: " + answer);
             post(mc, "T-800 ▶ " + answer);
             speak(answer);
         } catch (Exception ex) {
             status = "ASSISTANT ERROR // " + ex.getClass().getSimpleName();
-            post(mc, "T-800: Sprachassistent-Fehler: " + ex.getMessage());
+            post(mc, "T-800: Voice assistant error: " + ex.getMessage());
         }
     }
 
-    private String askOllama(String prompt, String gameState) throws Exception {
-        String history = readMemory();
-        String system = "You are T-800, a concise tactical Minecraft Fabric assistant. Speak German unless the user uses another language. " +
-                "Use only the supplied game state; do not invent observations. Give advice, not automatic combat control. " +
-                "Never claim a game action was executed. Game state: " + gameState + "\nRecent local conversation memory:\n" + history;
-        String body = "{\"model\":\"" + json(ollamaModel()) + "\",\"stream\":false,\"messages\":[{\"role\":\"system\",\"content\":\"" +
-                json(system) + "\"},{\"role\":\"user\",\"content\":\"" + json(prompt) + "\"}],\"options\":{\"temperature\":0.4}}";
-        HttpRequest request = HttpRequest.newBuilder(URI.create(ollamaUrl())).timeout(Duration.ofSeconds(75))
-                .header("Content-Type", "application/json").POST(HttpRequest.BodyPublishers.ofString(body)).build();
-        HttpResponse<String> response = http.send(request, HttpResponse.BodyHandlers.ofString());
-        if (response.statusCode() < 200 || response.statusCode() >= 300)
-            throw new IOException("Ollama HTTP " + response.statusCode() + "; starte Ollama und lade Modell " + ollamaModel());
-        Matcher m = Pattern.compile("\"content\"\\s*:\\s*\"((?:\\\\.|[^\"\\\\])*)\"").matcher(response.body());
-        if (!m.find()) throw new IOException("Keine Antwort im Ollama-JSON; Modell/Server prüfen.");
-        String answer = unjson(m.group(1)).trim();
-        if (answer.isBlank()) throw new IOException("Das Sprachmodell lieferte eine leere Antwort.");
-        return answer.length() > 1200 ? answer.substring(0, 1200) : answer;
+    /**
+     * Uses the mod's own local tactical systems only. No Ollama, cloud API, or external
+     * language model is called; the response is composed from live CombatAIService data.
+     */
+    private String answerLocally(String prompt, Minecraft mc, String gameState) {
+        String q = prompt.toLowerCase(Locale.ROOT);
+        var player = mc.player;
+        if (player == null || mc.level == null) return "No world is currently loaded.";
+        LivingEntity target = T800HudClient.TRACKER.target;
+        if (containsAny(q, "status", "health", "armor", "armour", "survival")) {
+            return String.format(Locale.ROOT,
+                    "System status. Health %.0f percent. Armor %d. Armor integrity %d percent. Hunger %d. %s",
+                    100.0 * player.getHealth() / Math.max(1.0f, player.getMaxHealth()),
+                    player.getArmorValue(), CombatAIService.INSTANCE.armorDurability(player),
+                    player.getFoodData().getFoodLevel(), CombatAIService.INSTANCE.diagnosis());
+        }
+        if (containsAny(q, "target", "enemy", "opponent", "skill", "pattern", "scan")) {
+            if (target == null || !target.isAlive()) return "No target locked. Aim at a loaded entity to acquire a target.";
+            return "Target locked. " + target.getName().getString() + ". Range " +
+                    String.format(Locale.ROOT, "%.1f blocks. ", target.distanceTo(player)) +
+                    "Health " + Math.round(target.getHealth()) + " of " + Math.round(target.getMaxHealth()) +
+                    ". Tactical skill estimate " + CombatAIService.INSTANCE.skillScore(target) + " out of 100. " +
+                    CombatAIService.INSTANCE.patternSummary(target) + ". " + CombatAIService.INSTANCE.advice();
+        }
+        if (containsAny(q, "threat", "projectile", "arrow", "incoming", "danger")) {
+            String projectile = CombatAIService.INSTANCE.projectileThreats().stream().limit(2)
+                    .map(CombatAIService.ProjectileThreat::summary).reduce((a,b) -> a + ". " + b).orElse("No incoming projectile trajectory detected.");
+            var top = CombatAIService.INSTANCE.threats().stream().findFirst();
+            String threat = top.map(t -> "Top threat " + t.entity.getName().getString() +
+                    ", score " + Math.round(t.score) + " out of 100, range " +
+                    String.format(Locale.ROOT, "%.1f blocks. ", t.distance) + t.pattern + ".")
+                    .orElse("No nearby threats detected.");
+            return threat + " " + projectile;
+        }
+        if (containsAny(q, "map", "location", "coordinates", "where am i")) {
+            var pos = player.blockPosition();
+            return "Current coordinates X " + pos.getX() + ", Y " + pos.getY() + ", Z " + pos.getZ() +
+                    ". Press F6 to open GigaMap. Saved bookmarks are shown in gold.";
+        }
+        if (containsAny(q, "effect", "potion", "buff", "debuff")) {
+            String effects = player.getActiveEffects().stream().limit(5)
+                    .map(e -> e.getEffect().value().getDisplayName().getString() +
+                            (e.isInfiniteDuration() ? " active" : " for " + Math.max(1, e.getDuration() / 20) + " seconds"))
+                    .reduce((a,b) -> a + ". " + b).orElse("No active status effects.");
+            return "Status effect scan. " + effects;
+        }
+        if (containsAny(q, "help", "commands", "what can you do")) {
+            return "T-800 local assistant online. Ask for status, target scan, threat analysis, effects, or coordinates. " +
+                    "Hold F10 to speak. F4 opens Combat Analytics, F6 opens GigaMap, I toggles thermal vision. " +
+                    "I use the mod's local tactical analysis only; no external language model is connected.";
+        }
+        var top = CombatAIService.INSTANCE.threats().stream().findFirst();
+        if (top.isPresent()) {
+            var t = top.get();
+            return "Local tactical core online. Nearest priority is " + t.entity.getName().getString() +
+                    ", threat score " + Math.round(t.score) + ", range " +
+                    String.format(Locale.ROOT, "%.1f blocks. ", t.distance) + t.pattern + ". " + t.advice;
+        }
+        return "Local tactical core online. No immediate threat detected. " +
+                "I can report status, scan a target, analyze incoming projectiles, read effects, or report coordinates.";
+    }
+
+    private boolean containsAny(String text, String... terms) {
+        for (String term : terms) if (text.contains(term)) return true;
+        return false;
     }
 
     private String snapshot(Minecraft mc) {
@@ -155,20 +203,20 @@ public final class VoiceAssistantService {
 
     private Optional<String> detectAction(String text) {
         String s = text.toLowerCase(Locale.ROOT);
-        if (s.contains("öffne die karte") || s.contains("open map") || s.contains("gigamap")) return Optional.of("OPEN_GIGAMAP");
-        if (s.contains("öffne einstellungen") || s.contains("open settings")) return Optional.of("OPEN_SETTINGS");
-        if (s.contains("aktiviere nachtsicht") || s.contains("enable night vision")) return Optional.of("NIGHT_ON");
-        if (s.contains("deaktiviere nachtsicht") || s.contains("disable night vision")) return Optional.of("NIGHT_OFF");
-        if (s.contains("aktiviere terminator sicht") || s.contains("enable terminator vision")) return Optional.of("VISION_ON");
-        if (s.contains("deaktiviere terminator sicht") || s.contains("disable terminator vision")) return Optional.of("VISION_OFF");
-        if (s.contains("aktiviere hud") || s.contains("enable hud")) return Optional.of("HUD_ON");
-        if (s.contains("deaktiviere hud") || s.contains("disable hud")) return Optional.of("HUD_OFF");
+        if (s.contains("open map") || s.contains("gigamap")) return Optional.of("OPEN_GIGAMAP");
+        if (s.contains("open settings")) return Optional.of("OPEN_SETTINGS");
+        if (s.contains("enable night vision")) return Optional.of("NIGHT_ON");
+        if (s.contains("disable night vision")) return Optional.of("NIGHT_OFF");
+        if (s.contains("enable terminator vision")) return Optional.of("VISION_ON");
+        if (s.contains("disable terminator vision")) return Optional.of("VISION_OFF");
+        if (s.contains("enable hud")) return Optional.of("HUD_ON");
+        if (s.contains("disable hud")) return Optional.of("HUD_OFF");
         return Optional.empty();
     }
 
     public void confirm(Minecraft mc) {
         PendingAction a = pending;
-        if (a == null) { post(mc, "T-800: Keine Aktion wartet auf Bestätigung."); return; }
+        if (a == null) { post(mc, "T-800: No action is waiting for confirmation."); return; }
         pending = null;
         switch (a.action) {
             case "OPEN_GIGAMAP" -> mc.setScreen(new GigaMapScreen());
@@ -179,13 +227,13 @@ public final class VoiceAssistantService {
             case "VISION_OFF" -> Config.vision = false;
             case "HUD_ON" -> Config.hud = true;
             case "HUD_OFF" -> Config.hud = false;
-            default -> { post(mc, "T-800: Unbekannte Aktion abgelehnt."); return; }
+            default -> { post(mc, "T-800: Unknown action rejected."); return; }
         }
-        Config.save(); status = "ACTION CONFIRMED"; post(mc, "T-800: Bestätigte Aktion ausgeführt: " + a.action); speak("Action confirmed.");
+        Config.save(); status = "ACTION CONFIRMED"; post(mc, "T-800: Confirmed action executed: " + a.action); speak("Action confirmed.");
     }
     public void cancel(Minecraft mc) {
-        if (pending == null) { post(mc, "T-800: Keine Aktion zum Abbrechen."); return; }
-        pending = null; status = "ACTION CANCELLED"; post(mc, "T-800: Aktion abgebrochen.");
+        if (pending == null) { post(mc, "T-800: No action to cancel."); return; }
+        pending = null; status = "ACTION CANCELLED"; post(mc, "T-800: Action cancelled.");
     }
     private record PendingAction(String action, String originalText) {}
 
@@ -220,7 +268,7 @@ public final class VoiceAssistantService {
         Thread tts = new Thread(() -> {
             try {
                 String os = System.getProperty("os.name", "").toLowerCase(Locale.ROOT);
-                boolean english = looksEnglish(safe);
+                boolean english = true;
                 if (os.contains("win")) {
                     String culture = english ? "en-US" : "de-DE";
                     String script = "Add-Type -AssemblyName System.Speech; " +
@@ -231,9 +279,9 @@ public final class VoiceAssistantService {
                     new ProcessBuilder("powershell", "-NoProfile", "-Command", script).redirectErrorStream(true).start();
                 } else if (os.contains("mac")) {
                     // Use the default macOS voice immediately; set a preferred language voice in macOS settings if needed.
-                    new ProcessBuilder("say", "-r", "190", safe).redirectErrorStream(true).start();
+                    new ProcessBuilder("say", "-v", "Samantha", "-r", "170", safe).redirectErrorStream(true).start();
                 } else {
-                    new ProcessBuilder("espeak", "-s", "175", "-v", english ? "en-us" : "de", safe)
+                    new ProcessBuilder("espeak", "-s", "155", "-p", "38", "-v", "en-us+m3", safe)
                             .redirectErrorStream(true).start();
                 }
             } catch (Exception ex) {
