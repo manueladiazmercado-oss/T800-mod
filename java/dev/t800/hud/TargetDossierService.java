@@ -112,7 +112,7 @@ public final class TargetDossierService {
         if (activeReplayFile != null && now - lastReplayFrameAt >= SAMPLE_INTERVAL_MS) {
             appendFrame(mc, player, now, event); lastReplayFrameAt = now;
         }
-        String pattern = CombatAIService.INSTANCE.patternSummary(player);
+        String pattern = adaptiveMemory(d) + " | " + CombatAIService.INSTANCE.patternSummary(player);
         d.lastPattern = pattern.length() > 180 ? pattern.substring(0, 180) : pattern;
         saveIfDue(false);
     }
@@ -211,16 +211,16 @@ public final class TargetDossierService {
             String safeName = d.name.replaceAll("[^A-Za-z0-9._-]", "_");
             Path out = dir.resolve(safeName + "-" + d.uuid + "-" + System.currentTimeMillis() + ".txt");
             StringBuilder b = new StringBuilder();
-            b.append("T-800 TARGET DOSSIER EXPORT\\n");
-            b.append("Name: ").append(d.name).append("\\nUUID: ").append(d.uuid).append("\\n");
-            b.append("First seen: ").append(d.firstSeen).append("\\nLast seen: ").append(d.lastSeen).append("\\n");
-            b.append("Sightings: ").append(d.sightings).append("\\nTarget locks: ").append(d.observedLocks).append("\\n");
-            b.append("Observed target HP loss: ").append(d.observedTargetHealthLoss).append("\\nSelf HP loss while tracked: ").append(d.observedSelfHealthLoss).append("\\n");
-            b.append("Observed target HP-drop events: ").append(d.observedHealthDrops).append("\\nDamage events: ").append(d.observedDamageTakenEvents).append("\\n");
-            b.append("Server: ").append(d.server).append("\\nDimension: ").append(d.dimension).append("\\nPosition: ").append(d.x).append(" ").append(d.y).append(" ").append(d.z).append("\\n");
-            b.append("Last held item: ").append(d.lastHeldItem).append("\\nAdaptive combat memory: ").append(d.lastPattern).append("\\n");
-            b.append("Recorded fights: ").append(d.replayCount).append("\\nReplay files:\\n");
-            for (Path p : replaysFor(uuid)) b.append(" - ").append(p.getFileName()).append("\\n");
+            b.append("T-800 TARGET DOSSIER EXPORT\n");
+            b.append("Name: ").append(d.name).append("\nUUID: ").append(d.uuid).append("\n");
+            b.append("First seen: ").append(d.firstSeen).append("\nLast seen: ").append(d.lastSeen).append("\n");
+            b.append("Sightings: ").append(d.sightings).append("\nTarget locks: ").append(d.observedLocks).append("\n");
+            b.append("Observed target HP loss: ").append(d.observedTargetHealthLoss).append("\nSelf HP loss while tracked: ").append(d.observedSelfHealthLoss).append("\n");
+            b.append("Observed target HP-drop events: ").append(d.observedHealthDrops).append("\nDamage events: ").append(d.observedDamageTakenEvents).append("\n");
+            b.append("Server: ").append(d.server).append("\nDimension: ").append(d.dimension).append("\nPosition: ").append(d.x).append(" ").append(d.y).append(" ").append(d.z).append("\n");
+            b.append("Last held item: ").append(d.lastHeldItem).append("\nAdaptive combat memory: ").append(d.lastPattern).append("\n");
+            b.append("Recorded fights: ").append(d.replayCount).append("\nReplay files:\n");
+            for (Path p : replaysFor(uuid)) b.append(" - ").append(p.getFileName()).append("\n");
             Files.writeString(out, b.toString(), StandardCharsets.UTF_8, StandardOpenOption.CREATE_NEW);
             return out;
         } catch (IOException ignored) { return null; }
