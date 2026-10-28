@@ -29,7 +29,7 @@ public final class TargetDossierScreen extends Screen {
             }
         }).bounds(16, height - 28, 90, 20).build());
         addRenderableWidget(Button.builder(Component.literal("NEXT"), b -> {
-            List<TargetDossierService.Dossier> all = TargetDossierService.INSTANCE.recentDossiers(0);
+            List<TargetDossierService.Dossier> all = filteredDossiers();
             if (!all.isEmpty()) {
                 page = Math.floorMod(page - 1, all.size());
                 selectedUuid = all.get(page).uuid;
