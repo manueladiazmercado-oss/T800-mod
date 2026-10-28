@@ -74,11 +74,20 @@ public final class VoiceAssistantService {
                 post(mc, "T-800: Speech input model missing: " + modelPath() + ". Place a Whisper.cpp model such as ggml-base.bin there.");
                 return;
             }
+            Files.createDirectories(modelPath().getParent());
+            Path outputPath = modelPath().getParent().resolve("whisper-output.txt");
             Process process = new ProcessBuilder(whisperCommand(), "-m", modelPath().toString(),
-                    "-f", recordingPath().toString(), "-l", "en", "-nt").redirectErrorStream(true).start();
+                    "-f", recordingPath().toString(), "-l", "en", "-nt")
+                    .redirectErrorStream(true).redirectOutput(outputPath.toFile()).start();
             boolean ended = process.waitFor(90, TimeUnit.SECONDS);
-            if (!ended) { process.destroyForcibly(); status = "STT TIMEOUT"; post(mc, "T-800: Speech recognition timed out."); return; }
-            String transcript = new String(process.getInputStream().readAllBytes(), StandardCharsets.UTF_8).trim();
+            if (!ended) {
+                process.destroyForcibly();
+                status = "STT TIMEOUT";
+                post(mc, "T-800: Speech recognition timed out.");
+                return;
+            }
+            String transcript = Files.exists(outputPath)
+                    ? Files.readString(outputPath, StandardCharsets.UTF_8).trim() : "";
             if (process.exitValue() != 0 || transcript.isBlank()) {
                 status = "SPEECH NOT RECOGNIZED";
                 post(mc, "T-800: Speech was not recognized. Check whisper-cli and the Whisper model.");
