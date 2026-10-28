@@ -186,7 +186,7 @@ public final class TargetDossierService {
                     Double.parseDouble(f.get(2)),Double.parseDouble(f.get(3)),Double.parseDouble(f.get(4)),
                     Double.parseDouble(f.get(5)),Double.parseDouble(f.get(6)),Double.parseDouble(f.get(7)),
                     Float.parseFloat(f.get(8)),Float.parseFloat(f.get(9)),Float.parseFloat(f.get(10)),Float.parseFloat(f.get(11)),
-                    Float.parseFloat(f.get(12)),Float.parseFloat(f.get(13)),Double.parseDouble(f.get(14)),f.get(15),f.get(16)); }
+                    Float.parseFloat(f.get(12)),Float.parseFloat(f.get(13)),Double.parseDouble(f.get(14)),f.get(15),f.get(16))); }
                 catch (RuntimeException ignored) { }
             }
         } catch (IOException ignored) { }
@@ -200,6 +200,45 @@ public final class TargetDossierService {
         }
         out.add(field.toString()); return out;
     }
+    /** Export one dossier and its replay file list to a user-readable local text file. */
+    public synchronized Path exportDossier(String uuid) {
+        load();
+        Dossier d = dossiers.get(uuid);
+        if (d == null) return null;
+        try {
+            Path dir = root().resolve("exports");
+            Files.createDirectories(dir);
+            String safeName = d.name.replaceAll("[^A-Za-z0-9._-]", "_");
+            Path out = dir.resolve(safeName + "-" + d.uuid + "-" + System.currentTimeMillis() + ".txt");
+            StringBuilder b = new StringBuilder();
+            b.append("T-800 TARGET DOSSIER EXPORT\\n");
+            b.append("Name: ").append(d.name).append("\\nUUID: ").append(d.uuid).append("\\n");
+            b.append("First seen: ").append(d.firstSeen).append("\\nLast seen: ").append(d.lastSeen).append("\\n");
+            b.append("Sightings: ").append(d.sightings).append("\\nTarget locks: ").append(d.observedLocks).append("\\n");
+            b.append("Observed target HP loss: ").append(d.observedTargetHealthLoss).append("\\nSelf HP loss while tracked: ").append(d.observedSelfHealthLoss).append("\\n");
+            b.append("Observed target HP-drop events: ").append(d.observedHealthDrops).append("\\nDamage events: ").append(d.observedDamageTakenEvents).append("\\n");
+            b.append("Server: ").append(d.server).append("\\nDimension: ").append(d.dimension).append("\\nPosition: ").append(d.x).append(" ").append(d.y).append(" ").append(d.z).append("\\n");
+            b.append("Last held item: ").append(d.lastHeldItem).append("\\nAdaptive combat memory: ").append(d.lastPattern).append("\\n");
+            b.append("Recorded fights: ").append(d.replayCount).append("\\nReplay files:\\n");
+            for (Path p : replaysFor(uuid)) b.append(" - ").append(p.getFileName()).append("\\n");
+            Files.writeString(out, b.toString(), StandardCharsets.UTF_8, StandardOpenOption.CREATE_NEW);
+            return out;
+        } catch (IOException ignored) { return null; }
+    }
+
+    /** Local adaptive summary: observations only, not a prediction of hidden server data. */
+    private String adaptiveMemory(Dossier d) {
+        if (d.observedHealthDrops == 0 && d.observedDamageTakenEvents == 0) return "COLLECTING DATA";
+        double targetAvg = d.observedHealthDrops == 0 ? 0 : d.observedTargetHealthLoss / d.observedHealthDrops;
+        double selfAvg = d.observedDamageTakenEvents == 0 ? 0 : d.observedSelfHealthLoss / d.observedDamageTakenEvents;
+        String response = targetAvg > selfAvg * 1.35 ? "TARGET HP DROPS OFTEN LARGER" :
+            selfAvg > targetAvg * 1.35 ? "YOU TAKE LARGER HP DROPS" : "DAMAGE EXCHANGE MIXED";
+        String range = d.lastHeldItem.toLowerCase(Locale.ROOT).contains("bow") || d.lastHeldItem.toLowerCase(Locale.ROOT).contains("crossbow")
+            ? "RANGED ITEM OBSERVED" : "MELEE/OTHER ITEM OBSERVED";
+        return response + " | " + range + " | avg target drop " + String.format(Locale.ROOT, "%.1f", targetAvg)
+            + " / self drop " + String.format(Locale.ROOT, "%.1f", selfAvg);
+    }
+
     private static Dossier copy(Dossier s) {
         Dossier d=new Dossier(); d.uuid=s.uuid;d.name=s.name;d.firstSeen=s.firstSeen;d.lastSeen=s.lastSeen;d.sightings=s.sightings;
         d.observedLocks=s.observedLocks;d.observedHealthDrops=s.observedHealthDrops;d.observedDamageTakenEvents=s.observedDamageTakenEvents;
