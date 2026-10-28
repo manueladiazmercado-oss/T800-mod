@@ -162,6 +162,18 @@ public final class TargetDossierService {
         Path p=replayDir().resolve(d.latestReplay).normalize();
         return p.startsWith(replayDir())&&Files.isRegularFile(p)?p:null;
     }
+    /** All retained local replay files for this UUID, newest first. */
+    public synchronized List<Path> replaysFor(String uuid) {
+        load();
+        if (uuid == null || uuid.isBlank()) return List.of();
+        try (var paths = Files.list(replayDir())) {
+            return paths.filter(Files::isRegularFile)
+                .filter(p -> p.getFileName().toString().contains(uuid) && p.getFileName().toString().endsWith(".csv"))
+                .sorted(Comparator.comparingLong((Path p) -> p.toFile().lastModified()).reversed())
+                .toList();
+        } catch (IOException ignored) { return List.of(); }
+    }
+
     public synchronized List<ReplayFrame> readReplay(Path path) {
         List<ReplayFrame> frames=new ArrayList<>();
         if (path==null||!path.normalize().startsWith(replayDir())||!Files.isRegularFile(path)) return frames;
