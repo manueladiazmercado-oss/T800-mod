@@ -26,7 +26,7 @@ public class T800HudClient implements ClientModInitializer {
     public static final TargetTracker TRACKER = new TargetTracker();
 
     private static KeyMapping toggleKey, modeKey, visionKey, nightKey, armorKey, settingsKey,
-            analyticsKey, gigaMapKey, terminationKey, performanceKey, infraredKey, voiceKey, confirmActionKey, cancelActionKey, pvpModeKey;
+            analyticsKey, dossierKey, gigaMapKey, terminationKey, performanceKey, infraredKey, voiceKey, confirmActionKey, cancelActionKey, pvpModeKey;
     private static boolean voiceWasDown;
     private static boolean nvApplied;
     private static boolean deathRecorded;
@@ -65,6 +65,7 @@ public class T800HudClient implements ClientModInitializer {
         armorKey = reg("key.t800hud.armor", GLFW.GLFW_KEY_Y, category);
         settingsKey = reg("key.t800hud.settings", GLFW.GLFW_KEY_RIGHT_SHIFT, category);
         analyticsKey = reg("key.t800hud.analytics", GLFW.GLFW_KEY_F4, category);
+        dossierKey = reg("key.t800hud.dossier", GLFW.GLFW_KEY_P, category);
         gigaMapKey = reg("key.t800hud.gigamap", GLFW.GLFW_KEY_F6, category);
         terminationKey = reg("key.t800hud.termination", GLFW.GLFW_KEY_F8, category);
         performanceKey = reg("key.t800hud.performance", GLFW.GLFW_KEY_F9, category);
@@ -83,6 +84,7 @@ public class T800HudClient implements ClientModInitializer {
             while (armorKey.consumeClick()) { if (mc.screen == null && mc.player != null) mc.setScreen(new ArmorScreen()); }
             while (settingsKey.consumeClick()) { if (mc.screen == null) mc.setScreen(new SettingsScreen()); }
             while (analyticsKey.consumeClick()) { if (mc.screen == null && mc.player != null) analyticsOverlayVisible = !analyticsOverlayVisible; }
+            while (dossierKey.consumeClick()) { if (mc.screen == null && mc.player != null) mc.setScreen(new TargetDossierScreen()); }
             while (gigaMapKey.consumeClick()) { if (mc.screen == null && mc.player != null) mc.setScreen(new GigaMapScreen()); }
             while (terminationKey.consumeClick()) { Config.terminationMode = !Config.terminationMode; dirty = true; }
             while (performanceKey.consumeClick()) { Config.performanceProfile = !Config.performanceProfile; dirty = true; }
