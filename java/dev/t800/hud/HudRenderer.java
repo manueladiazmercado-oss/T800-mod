@@ -85,6 +85,7 @@ public class HudRenderer implements HudElement {
         if (mc.player.isFallFlying() && !Config.performanceProfile) drawFlightAssist(g, mc, w, h);
         drawWarnings(g, mc, w, h, now);
         drawProjectileWarning(g, mc, w, now);
+        if (Config.terminationMode && !Config.performanceProfile) drawTerminationModePanel(g, mc, w, h, now);
         if (Config.customBars && survival(mc)) drawBars(g, mc, w, h, now);
 
         if (Config.showTarget && t.target != null) {
@@ -1004,6 +1005,43 @@ public class HudRenderer implements HudElement {
         else itemScore = 0.20;
         // For mobs, the attack-damage attribute is often more informative than a held item.
         return Mth.clamp(Math.max(itemScore, safeAttribute(e, Attributes.ATTACK_DAMAGE) / 30.0), 0, 1);
+    }
+
+    /** Extra advisory systems shown only while Termination Mode is active. */
+    private void drawTerminationModePanel(GuiGraphics g, Minecraft mc, int w, int h, long now) {
+        TargetTracker tracker = T800HudClient.TRACKER;
+        LivingEntity target = tracker.target;
+        int pw = Math.min(154, Math.max(126, w / 4));
+        int ph = 67;
+        int x = w - pw - 8;
+        int y = 34;
+        g.fill(x, y, x + pw, y + ph, 0xC0080B10);
+        g.fill(x, y, x + 2, y + ph, 0xFFFF3038);
+        g.fill(x + 2, y, x + pw, y + 1, 0xAAFF3038);
+        Font f = mc.font;
+        text(g, f, "TERMINATION // ACTIVE", x + 6, y + 5, 0.48f, 0xFFFF4545);
+        int sweepX = x + 6 + (int) ((now / 18L) % Math.max(1, pw - 14));
+        g.fill(sweepX, y + 14, sweepX + 2, y + 15, 0xFFFF5555);
+        if (target != null && target.isAlive() && target.level() == mc.level) {
+            String name = target.getName().getString();
+            if (name.length() > 18) name = name.substring(0, 16) + "..";
+            text(g, f, "LOCK " + name, x + 6, y + 18, 0.48f, Config.text());
+            text(g, f, String.format(java.util.Locale.ROOT, "HP %.0f/%.0f  DIST %.1fm",
+                    target.getHealth(), target.getMaxHealth(), target.distanceTo(mc.player)), x + 6, y + 28, 0.43f, Config.text());
+            String pattern = CombatAIService.INSTANCE.patternSummary(target);
+            int cut = pattern.indexOf('|');
+            if (cut >= 0) pattern = pattern.substring(0, cut).trim();
+            if (pattern.length() > 19) pattern = pattern.substring(0, 17) + "..";
+            text(g, f, "MOTION " + pattern, x + 6, y + 38, 0.43f, Config.dim());
+        } else {
+            text(g, f, "NO TARGET LOCK", x + 6, y + 20, 0.48f, AMBER);
+            text(g, f, "Acquire a visible target", x + 6, y + 31, 0.42f, Config.dim());
+        }
+        var projectiles = CombatAIService.INSTANCE.projectileThreats();
+        String projectile = projectiles.isEmpty() ? "PROJECTILES CLEAR" : "PROJECTILE " + projectiles.get(0).summary();
+        if (projectile.length() > 29) projectile = projectile.substring(0, 27) + "..";
+        text(g, f, projectile, x + 6, y + 49, 0.40f, projectiles.isEmpty() ? Config.dim() : 0xFFFF5555);
+        text(g, f, "ENTITIES " + tracker.total + " / " + tracker.players + " PLAYERS", x + 6, y + 58, 0.38f, Config.dim());
     }
 
     private void drawEdgeHint(GuiGraphics g, Minecraft mc, TargetTracker t, int w, int h, long now) {
