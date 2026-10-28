@@ -66,8 +66,8 @@ tasks.register("generateT800ElytraPack") {
             int pulse = [100, 145, 205, 255, 220, 170, 125, 95][f]
             g.translate(0, y0)
             // left and right wings, with a narrow central hinge
-            poly([2, 24, 30, 27, 20, 7] as int[], [2, 0, 5, 21, 30, 25] as int[], c(18, 21, 28))
-            poly([34, 40, 57, 62, 57, 38] as int[], [5, 0, 2, 25, 30, 21] as int[], c(18, 21, 28))
+            poly([2, 24, 30, 27, 20, 7] as int[], [2, 0, 5, 21, 30, 25] as int[], c(12, 15, 22))
+            poly([34, 40, 57, 62, 57, 38] as int[], [5, 0, 2, 25, 30, 21] as int[], c(12, 15, 22))
             // plate bevels and layered armor
             poly([4, 23, 27, 23, 8] as int[], [4, 3, 7, 19, 23] as int[], c(54, 60, 72))
             poly([36, 41, 55, 59, 55, 39] as int[], [7, 3, 4, 23, 23, 19] as int[], c(54, 60, 72))
@@ -81,12 +81,12 @@ tasks.register("generateT800ElytraPack") {
             g.drawLine(6, 19, 20, 25); g.drawLine(43, 25, 58, 19)
             // red emissive strips pulse through the animation frames
             g.setColor(c(90, 0, 0)); g.drawLine(5, 7, 8, 22); g.drawLine(58, 7, 55, 22)
-            g.setColor(c(pulse, 8, 14)); g.drawLine(6, 7, 9, 21); g.drawLine(57, 7, 54, 21)
+            g.setColor(c(pulse, 8, 14)); g.fillRect(6, 7, 3, 16); g.fillRect(55, 7, 3, 16)
             g.setColor(c(Math.min(255, pulse + 35), 35, 40)); g.drawLine(6, 8, 7, 13); g.drawLine(57, 8, 56, 13)
             // central T-800 reactor and twin thruster marks
             poly([28, 36, 38, 35, 29] as int[], [8, 8, 23, 27, 23] as int[], c(12, 14, 19))
             g.setColor(c(90, 10, 15)); g.fillRect(31, 10, 2, 10)
-            g.setColor(c(pulse, 15, 20)); g.fillRect(32, 10, 1, 8)
+            g.setColor(c(pulse, 15, 20)); g.fillRect(31, 10, 3, 8)
             g.setColor(c(100, 100, 110)); g.drawLine(28, 9, 30, 11); g.drawLine(36, 9, 34, 11)
             g.setColor(c(pulse, 18, 18)); g.fillRect(29, 22, 2, 4); g.fillRect(34, 22, 2, 4)
             g.setColor(c(255, Math.max(25, (int)(pulse / 4)), Math.max(25, (int)(pulse / 4)))); g.drawLine(29, 23, 29, 24); g.drawLine(34, 23, 34, 24)
@@ -102,7 +102,7 @@ tasks.register("generateT800ElytraPack") {
         ]))
         def packMeta = new File(packDir, "pack.mcmeta")
         packMeta.text = groovy.json.JsonOutput.prettyPrint(groovy.json.JsonOutput.toJson([
-            pack: [pack_format: 75, description: "T-800 Cybernetic Elytra - animated red reactor texture"]
+            pack: [pack_format: 75, description: "T-800 Cybernetic Elytra - high-contrast animated red reactor texture"]
         ]))
         new File(packDir, "README.txt").text = """T-800 CYBERNETIC ELYTRA
 This pack replaces the vanilla elytra texture with an animated charcoal-steel and red-reactor skin.
