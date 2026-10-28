@@ -7,12 +7,14 @@ import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
 
 import java.util.List;
-import java.util.Locale;\nimport java.nio.file.Path;
+import java.util.Locale;
+import java.nio.file.Path;
 
 /** Persistent local dossier and compact event replay browser. */
 public final class TargetDossierScreen extends Screen {
     private String selectedUuid = "";
-    private int page;\n    private String searchQuery = "";
+    private int page;
+    private String searchQuery = "";
 
     public TargetDossierScreen() {
         super(Component.literal("T-800 // TARGET DOSSIER"));
@@ -52,7 +54,24 @@ public final class TargetDossierScreen extends Screen {
                 .bounds(width - 96, height - 28, 80, 20).build());
     }
 
-    private List<TargetDossierService.Dossier> filteredDossiers() {\n        String q = searchQuery.toLowerCase(Locale.ROOT).trim();\n        return TargetDossierService.INSTANCE.recentDossiers(0).stream().filter(d -> q.isEmpty() || d.name.toLowerCase(Locale.ROOT).contains(q) || d.uuid.toLowerCase(Locale.ROOT).contains(q) || d.server.toLowerCase(Locale.ROOT).contains(q)).toList();\n    }\n\n    @Override public boolean charTyped(char chr, int modifiers) {\n        if (!Character.isISOControl(chr)) { searchQuery += chr; page = 0; selectedUuid = ""; return true; }\n        return super.charTyped(chr, modifiers);\n    }\n\n    @Override public boolean keyPressed(int keyCode, int scanCode, int modifiers) {\n        if (keyCode == 256) { onClose(); return true; }\n        if (keyCode == 259 && !searchQuery.isEmpty()) { searchQuery = searchQuery.substring(0, searchQuery.length()-1); page = 0; selectedUuid = ""; return true; }\n        if (keyCode == 261) { searchQuery = ""; page = 0; selectedUuid = ""; return true; }\n        return super.keyPressed(keyCode, scanCode, modifiers);\n    }\n\n    private void line(GuiGraphics g, String text, int x, int y, float scale, int color) {
+    private List<TargetDossierService.Dossier> filteredDossiers() {
+        String q = searchQuery.toLowerCase(Locale.ROOT).trim();
+        return TargetDossierService.INSTANCE.recentDossiers(0).stream().filter(d -> q.isEmpty() || d.name.toLowerCase(Locale.ROOT).contains(q) || d.uuid.toLowerCase(Locale.ROOT).contains(q) || d.server.toLowerCase(Locale.ROOT).contains(q)).toList();
+    }
+
+    @Override public boolean charTyped(char chr, int modifiers) {
+        if (!Character.isISOControl(chr)) { searchQuery += chr; page = 0; selectedUuid = ""; return true; }
+        return super.charTyped(chr, modifiers);
+    }
+
+    @Override public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
+        if (keyCode == 256) { onClose(); return true; }
+        if (keyCode == 259 && !searchQuery.isEmpty()) { searchQuery = searchQuery.substring(0, searchQuery.length()-1); page = 0; selectedUuid = ""; return true; }
+        if (keyCode == 261) { searchQuery = ""; page = 0; selectedUuid = ""; return true; }
+        return super.keyPressed(keyCode, scanCode, modifiers);
+    }
+
+    private void line(GuiGraphics g, String text, int x, int y, float scale, int color) {
         HudRenderer.text(g, font, text, x, y, scale, color);
     }
 
@@ -69,7 +88,8 @@ public final class TargetDossierScreen extends Screen {
         g.fill(left - 4, top - 4, split - 8, height - 36, 0xB018202B);
         g.fill(split, top - 4, width - 16, height - 36, 0xB018202B);
         line(g, "T-800 // TARGET DOSSIER", left, top, 0.9f, Config.main());
-        line(g, "LOCAL OBSERVATIONS ONLY // NO SERVER DATA EXTRACTION", left, top + 13, 0.42f, Config.dim());\n        line(g, "GLOBAL SEARCH: " + (searchQuery.isEmpty() ? "TYPE NAME / UUID / SERVER" : searchQuery) + "  [BACKSPACE DELETE / DELETE CLEAR]", left, top + 22, 0.40f, HudRenderer.AMBER);
+        line(g, "LOCAL OBSERVATIONS ONLY // NO SERVER DATA EXTRACTION", left, top + 13, 0.42f, Config.dim());
+        line(g, "GLOBAL SEARCH: " + (searchQuery.isEmpty() ? "TYPE NAME / UUID / SERVER" : searchQuery) + "  [BACKSPACE DELETE / DELETE CLEAR]", left, top + 22, 0.40f, HudRenderer.AMBER);
 
         List<TargetDossierService.Dossier> profiles = filteredDossiers();
         TargetDossierService.Dossier d = profiles.stream().filter(p -> p.uuid.equals(selectedUuid)).findFirst().orElse(null);
