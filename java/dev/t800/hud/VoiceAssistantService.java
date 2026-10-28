@@ -100,7 +100,7 @@ public final class VoiceAssistantService {
                 appendMemory("YOU: " + prompt + "\nPROPOSED ACTION: " + action.get());
                 return;
             }
-            String answer = answerLocally(prompt, mc);
+            String answer = answerOnClientThread(prompt, mc);
             lastAnswer = answer; status = "ONLINE // LOCAL TACTICAL CORE";
             appendMemory("YOU: " + prompt + "\nT-800: " + answer);
             post(mc, "T-800 ▶ " + answer);
@@ -109,6 +109,19 @@ public final class VoiceAssistantService {
             status = "ASSISTANT ERROR // " + ex.getClass().getSimpleName();
             post(mc, "T-800: Voice assistant error: " + ex.getMessage());
         }
+    }
+
+    /**
+     * Read live Minecraft state on the client thread. Whisper runs on a worker thread, so
+     * touching entities/world state directly there can cause intermittent crashes or stale data.
+     */
+    private String answerOnClientThread(String prompt, Minecraft mc) throws Exception {
+        CompletableFuture<String> answer = new CompletableFuture<>();
+        mc.execute(() -> {
+            try { answer.complete(answerLocally(prompt, mc)); }
+            catch (Throwable t) { answer.completeExceptionally(t); }
+        });
+        return answer.get(5, TimeUnit.SECONDS);
     }
 
     /**
