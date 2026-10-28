@@ -1,5 +1,11 @@
 name: build
 on: [push, workflow_dispatch]
+
+# Keep only the newest build per branch; older intermediate commits can be cancelled.
+concurrency:
+  group: t800-mod-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   build:
     runs-on: ubuntu-latest
