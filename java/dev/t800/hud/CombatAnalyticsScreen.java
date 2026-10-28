@@ -82,7 +82,11 @@ public class CombatAnalyticsScreen extends Screen {
                 line(g, String.format("OBS. DPS %.1f", T800HudClient.TRACKER.estimatedDps), margin, y, 0.56f, Config.text()); y += 11;
                 String tactic = target.distanceTo(mc.player) < 4 && score > 55 ? "KEEP DISTANCE"
                         : target.getHealth() < target.getMaxHealth() * 0.25f ? "TARGET WEAK" : "TRACK TARGET";
-                line(g, "TACTIC   " + tactic, margin, y, 0.56f, Config.main());
+                line(g, "TACTIC   " + tactic, margin, y, 0.56f, Config.main()); y += 11;
+                line(g, "SKILL EST. " + CombatAIService.INSTANCE.skillScore(target) + "/100", margin, y, 0.54f, Config.main()); y += 10;
+                String patternData = CombatAIService.INSTANCE.patternSummary(target);
+                if (patternData.length() > 34) patternData = patternData.substring(0, 34);
+                line(g, "PATTERN  " + patternData, margin, y, 0.45f, Config.text());
                 // Use the real tracked entity and animate the mouse-following preview to create a slow turn.
                 int panelX = split + 8;
                 int panelW = width - panelX - margin - 8;
