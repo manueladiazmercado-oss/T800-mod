@@ -2,6 +2,7 @@ package dev.t800.hud;
 
 import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.client.Minecraft;
+import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.network.chat.Component;
 
 import javax.sound.sampled.*;
