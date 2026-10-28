@@ -535,7 +535,7 @@ public class HudRenderer implements HudElement {
             // Compact effect glyphs stay visible in the open world, not only in inventory.
             g.fill(iconX, (int) y - 1, iconX + 5, (int) y + 4, 0xCC071019);
             g.fill(iconX, (int) y - 1, iconX + 1, (int) y + 4, col);
-            text(g, f, name.substring(0, 1), iconX + 1, y - 0.4, 0.38f, col);
+            text(g, f, name.substring(0, 1), iconX + 1, (int) y, 0.38f, col);
             text(g, f, line, textX, y, s, col);
             y += lh;
             n++;
