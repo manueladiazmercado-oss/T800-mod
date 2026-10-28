@@ -530,7 +530,7 @@ public class HudRenderer implements HudElement {
                     : String.format("%d:%02d", e.getDuration() / 1200, (e.getDuration() / 20) % 60);
             String line = name + lvl + "  " + time;
             int col = e.getEffect().value().isBeneficial() ? Config.text() : 0xFFFF6040;
-            int textX = w - 8 - textW(f, line, s);
+            int textX = (int) (w - 8 - textW(f, line, s));
             int iconX = Math.max(2, textX - 7);
             // Compact effect glyphs stay visible in the open world, not only in inventory.
             g.fill(iconX, (int) y - 1, iconX + 5, (int) y + 4, 0xCC071019);
