@@ -91,6 +91,7 @@ public class TargetTracker {
             kills++;
             killTime = Util.getMillis();
             killName = target.getName().getString();
+            TargetDossierService.INSTANCE.recordTermination(target);
             target = null;
         }
 
@@ -162,6 +163,7 @@ public class TargetTracker {
             }
             observedTargetHealth = hp;
         }
+        TargetDossierService.INSTANCE.tick(mc, target);
     }
 
     public void project(Minecraft mc, float pt, int w, int h) {
