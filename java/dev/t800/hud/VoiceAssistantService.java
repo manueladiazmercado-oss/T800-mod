@@ -75,7 +75,7 @@ public final class VoiceAssistantService {
                 return;
             }
             Process process = new ProcessBuilder(whisperCommand(), "-m", modelPath().toString(),
-                    "-f", recordingPath().toString(), "-nt").redirectErrorStream(true).start();
+                    "-f", recordingPath().toString(), "-l", "en", "-nt").redirectErrorStream(true).start();
             boolean ended = process.waitFor(90, TimeUnit.SECONDS);
             if (!ended) { process.destroyForcibly(); status = "STT TIMEOUT"; post(mc, "T-800: Speech recognition timed out."); return; }
             String transcript = new String(process.getInputStream().readAllBytes(), StandardCharsets.UTF_8).trim();
