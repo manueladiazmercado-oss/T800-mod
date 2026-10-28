@@ -108,7 +108,7 @@ public final class CombatReplayScreen extends Screen {
         line(g,"YOU",sx+6,sy-4,0.4f,0xFF43C9FF);
         line(g,"TARGET",tx+6,ty-4,0.4f,0xFFFF777D);
         int infoY=mapY+mapH+5;
-        line(g,String.format(Locale.ROOT,"FRAME %d / %d   TIME %.1fs   DIST %.2fm",frameIndex+1,frames.size(),f.elapsedMs()/1000.0,f.distance()),16,infoY,0.48f,Config.text());
+        line(g,String.format(Locale.ROOT,"FRAME %d / %d   TIME %.1fs   DIST %.2fm   FIGHT %d/%d",frameIndex+1,frames.size(),f.elapsedMs()/1000.0,f.distance(),replayFiles.isEmpty()?1:replayFileIndex+1,Math.max(1,replayFiles.size())),16,infoY,0.48f,Config.text());
         line(g,String.format(Locale.ROOT,"YOU HP %.1f   TARGET HP %.1f   TARGET ITEM %s",f.selfHealth(),f.targetHealth(),f.targetItem()),16,infoY+11,0.44f,Config.text());
         line(g,String.format(Locale.ROOT,"YOU %.1f %.1f %.1f   TARGET %.1f %.1f %.1f",f.selfX(),f.selfY(),f.selfZ(),f.targetX(),f.targetY(),f.targetZ()),16,infoY+21,0.39f,Config.dim());
         if(!f.event().isBlank()) line(g,"EVENT: "+f.event(),16,infoY+31,0.44f,HudRenderer.AMBER);
