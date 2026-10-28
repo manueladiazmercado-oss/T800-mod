@@ -4,6 +4,7 @@ Client-side Terminator-style HUD and tactical analysis mod for Minecraft 1.21.11
 
 ## Features
 - Target lock, live target data, threat ranking and combat analytics
+- Persistent local Target Dossiers keyed by player UUID, with sightings, observed combat events and a compact replay/event timeline (P)
 - Tactical movement-pattern estimates, combat memory and incoming-projectile forecast
 - GigaMap with block-scale zoom, sampled height relief, loaded-entity markers and persistent bookmarks
 - Thermal vision, survival telemetry, armor integrity alerts and custom HUD effect glyphs
@@ -17,6 +18,7 @@ Client-side Terminator-style HUD and tactical analysis mod for Minecraft 1.21.11
 - K: Terminator vision
 - I: thermal vision
 - F4: Combat Analytics overlay
+- P: Target Dossier / Combat Replay
 - F6: GigaMap
 - F7: PvP profile
 - F8: Termination mode
