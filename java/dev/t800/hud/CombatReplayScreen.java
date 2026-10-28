@@ -12,6 +12,8 @@ import java.util.Locale;
 public final class CombatReplayScreen extends Screen {
     private final String uuid;
     private List<TargetDossierService.ReplayFrame> frames = List.of();
+    private List<Path> replayFiles = List.of();
+    private int replayFileIndex;
     private int frameIndex;
     private boolean playing;
     private int tickCounter;
@@ -23,11 +25,9 @@ public final class CombatReplayScreen extends Screen {
     }
 
     @Override protected void init() {
-        Path path = TargetDossierService.INSTANCE.latestReplay(uuid);
-        if (path != null) {
-            replayName = path.getFileName().toString();
-            frames = TargetDossierService.INSTANCE.readReplay(path);
-        }
+        replayFiles = TargetDossierService.INSTANCE.replaysFor(uuid);
+        Path path = replayFiles.isEmpty() ? TargetDossierService.INSTANCE.latestReplay(uuid) : replayFiles.get(0);
+        if (path != null) loadReplay(path);
         addRenderableWidget(Button.builder(Component.literal("PLAY / PAUSE"), b -> playing = !playing)
                 .bounds(16, height - 28, 104, 20).build());
         addRenderableWidget(Button.builder(Component.literal("STEP +"), b -> {
@@ -36,8 +36,22 @@ public final class CombatReplayScreen extends Screen {
         addRenderableWidget(Button.builder(Component.literal("STEP -"), b -> {
             if (!frames.isEmpty()) frameIndex = Math.max(0, frameIndex - 1);
         }).bounds(202, height - 28, 70, 20).build());
+        addRenderableWidget(Button.builder(Component.literal("OLDER FIGHT"), b -> {
+            if (!replayFiles.isEmpty() && replayFileIndex + 1 < replayFiles.size()) loadReplay(replayFiles.get(++replayFileIndex));
+        }).bounds(278, height - 28, 90, 20).build());
+        addRenderableWidget(Button.builder(Component.literal("NEWER FIGHT"), b -> {
+            if (!replayFiles.isEmpty() && replayFileIndex > 0) loadReplay(replayFiles.get(--replayFileIndex));
+        }).bounds(374, height - 28, 90, 20).build());
         addRenderableWidget(Button.builder(Component.literal("CLOSE"), b -> onClose())
                 .bounds(width - 96, height - 28, 80, 20).build());
+    }
+
+    private void loadReplay(Path path) {
+        playing = false;
+        frameIndex = 0;
+        tickCounter = 0;
+        replayName = path.getFileName().toString();
+        frames = TargetDossierService.INSTANCE.readReplay(path);
     }
 
     @Override public void tick() {
