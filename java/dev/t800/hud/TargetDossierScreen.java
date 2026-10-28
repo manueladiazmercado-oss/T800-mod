@@ -7,12 +7,12 @@ import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
 
 import java.util.List;
-import java.util.Locale;
+import java.util.Locale;\nimport java.nio.file.Path;
 
 /** Persistent local dossier and compact event replay browser. */
 public final class TargetDossierScreen extends Screen {
     private String selectedUuid = "";
-    private int page;
+    private int page;\n    private String searchQuery = "";
 
     public TargetDossierScreen() {
         super(Component.literal("T-800 // TARGET DOSSIER"));
@@ -22,7 +22,7 @@ public final class TargetDossierScreen extends Screen {
     @Override
     protected void init() {
         addRenderableWidget(Button.builder(Component.literal("PREVIOUS"), b -> {
-            List<TargetDossierService.Dossier> all = TargetDossierService.INSTANCE.recentDossiers(0);
+            List<TargetDossierService.Dossier> all = filteredDossiers();
             if (!all.isEmpty()) {
                 page = (page + 1) % all.size();
                 selectedUuid = all.get(page).uuid;
@@ -40,11 +40,19 @@ public final class TargetDossierScreen extends Screen {
                     .filter(p -> p.uuid.equals(selectedUuid)).findFirst().orElse(null);
             if (d != null) minecraft.setScreen(new CombatReplayScreen(d.uuid));
         }).bounds(210, height - 28, 108, 20).build());
+        addRenderableWidget(Button.builder(Component.literal("EXPORT"), b -> {
+            Path exported = TargetDossierService.INSTANCE.exportDossier(selectedUuid);
+            if (minecraft != null && minecraft.player != null) minecraft.player.displayClientMessage(
+                    Component.literal(exported == null ? "T-800 // EXPORT FAILED" : "T-800 // EXPORTED: config/t800hud/exports/" + exported.getFileName()), true);
+        }).bounds(444, height - 28, 72, 20).build());
+        addRenderableWidget(Button.builder(Component.literal("COMPARE"), b -> {
+            if (minecraft != null && !selectedUuid.isBlank()) minecraft.setScreen(new FightComparisonScreen(selectedUuid));
+        }).bounds(520, height - 28, 82, 20).build());
         addRenderableWidget(Button.builder(Component.literal("CLOSE"), b -> onClose())
                 .bounds(width - 96, height - 28, 80, 20).build());
     }
 
-    private void line(GuiGraphics g, String text, int x, int y, float scale, int color) {
+    private List<TargetDossierService.Dossier> filteredDossiers() {\n        String q = searchQuery.toLowerCase(Locale.ROOT).trim();\n        return TargetDossierService.INSTANCE.recentDossiers(0).stream().filter(d -> q.isEmpty() || d.name.toLowerCase(Locale.ROOT).contains(q) || d.uuid.toLowerCase(Locale.ROOT).contains(q) || d.server.toLowerCase(Locale.ROOT).contains(q)).toList();\n    }\n\n    @Override public boolean charTyped(char chr, int modifiers) {\n        if (!Character.isISOControl(chr)) { searchQuery += chr; page = 0; selectedUuid = ""; return true; }\n        return super.charTyped(chr, modifiers);\n    }\n\n    @Override public boolean keyPressed(int keyCode, int scanCode, int modifiers) {\n        if (keyCode == 256) { onClose(); return true; }\n        if (keyCode == 259 && !searchQuery.isEmpty()) { searchQuery = searchQuery.substring(0, searchQuery.length()-1); page = 0; selectedUuid = ""; return true; }\n        if (keyCode == 261) { searchQuery = ""; page = 0; selectedUuid = ""; return true; }\n        return super.keyPressed(keyCode, scanCode, modifiers);\n    }\n\n    private void line(GuiGraphics g, String text, int x, int y, float scale, int color) {
         HudRenderer.text(g, font, text, x, y, scale, color);
     }
 
@@ -61,15 +69,15 @@ public final class TargetDossierScreen extends Screen {
         g.fill(left - 4, top - 4, split - 8, height - 36, 0xB018202B);
         g.fill(split, top - 4, width - 16, height - 36, 0xB018202B);
         line(g, "T-800 // TARGET DOSSIER", left, top, 0.9f, Config.main());
-        line(g, "LOCAL OBSERVATIONS ONLY // NO SERVER DATA EXTRACTION", left, top + 13, 0.42f, Config.dim());
+        line(g, "LOCAL OBSERVATIONS ONLY // NO SERVER DATA EXTRACTION", left, top + 13, 0.42f, Config.dim());\n        line(g, "GLOBAL SEARCH: " + (searchQuery.isEmpty() ? "TYPE NAME / UUID / SERVER" : searchQuery) + "  [BACKSPACE DELETE / DELETE CLEAR]", left, top + 22, 0.40f, HudRenderer.AMBER);
 
-        List<TargetDossierService.Dossier> profiles = TargetDossierService.INSTANCE.recentDossiers(0);
+        List<TargetDossierService.Dossier> profiles = filteredDossiers();
         TargetDossierService.Dossier d = profiles.stream().filter(p -> p.uuid.equals(selectedUuid)).findFirst().orElse(null);
         if (d == null && !profiles.isEmpty()) {
             d = profiles.get(0);
             selectedUuid = d.uuid;
         }
-        int y = top + 30;
+        int y = top + 40;
         if (d == null) {
             line(g, "NO PLAYER DOSSIERS YET", left, y, 0.65f, HudRenderer.AMBER);
             line(g, "Aim at a player to acquire a target.", left, y + 14, 0.5f, Config.text());
@@ -106,7 +114,7 @@ public final class TargetDossierScreen extends Screen {
                 if (ey > height - 48) break;
             }
         }
-        line(g, "P DOSSIER  |  OPEN REPLAY TO REVIEW MOVEMENT TRACE", 16, height - 39, 0.42f, Config.dim());
+        line(g, "TYPE TO SEARCH ALL LOCAL DOSSIERS  |  EXPORT SAVES TXT TO config/t800hud/exports", 16, height - 39, 0.40f, Config.dim());
     }
 
     @Override
