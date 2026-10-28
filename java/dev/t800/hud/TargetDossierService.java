@@ -2,6 +2,7 @@ package dev.t800.hud;
 
 import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.client.Minecraft;
+import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.phys.Vec3;
@@ -62,6 +63,7 @@ public final class TargetDossierService {
         }
         long now = System.currentTimeMillis();
         String uuid = player.getUUID().toString();
+        boolean returningTarget = dossiers.containsKey(uuid);
         Dossier d = dossiers.computeIfAbsent(uuid, key -> {
             Dossier fresh = new Dossier(); fresh.uuid = key; fresh.name = player.getName().getString(); fresh.firstSeen = now; return fresh;
         });
@@ -86,6 +88,10 @@ public final class TargetDossierService {
                 d.latestReplay = activeReplayFile.getFileName().toString(); d.replayCount++;
                 event = "TARGET LOCK";
                 addEvent(uuid, "TARGET LOCK", "Acquired " + d.name + " at " + d.x + " " + d.y + " " + d.z);
+                if (returningTarget) {
+                    mc.player.displayClientMessage(Component.literal("T-800 // TARGET RECOGNIZED: " + d.name
+                            + " | sightings " + d.sightings + " | recorded fights " + d.replayCount), true);
+                }
             } catch (IOException ex) {
                 activeReplayFile = null; addEvent(uuid, "REPLAY ERROR", "Could not create local replay: " + ex.getMessage());
             }
