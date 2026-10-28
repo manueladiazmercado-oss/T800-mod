@@ -25,10 +25,13 @@ public final class TargetDossierService {
     public static final TargetDossierService INSTANCE = new TargetDossierService();
     private static final int DISPLAY_EVENT_LIMIT = 240;
     private static final long SAMPLE_INTERVAL_MS = 100;
+    private static final long TARGET_CONFIRMATION_MS = 400;
     private final Map<String, Dossier> dossiers = new LinkedHashMap<>();
     private final List<ReplayEvent> events = new ArrayList<>();
     private boolean loaded;
     private String activeKey = "";
+    private String pendingKey = "";
+    private long pendingSince;
     private float lastTargetHealth = -1, lastSelfHealth = -1;
     private long lastSampleAt, lastSaveAt, replayStartedAt, lastReplayFrameAt;
     private Path activeReplayFile;
@@ -59,10 +62,28 @@ public final class TargetDossierService {
         load();
         if (mc.player == null || mc.level == null || !(target instanceof Player player) || !player.isAlive()) {
             stopReplay("TARGET LOST");
+            pendingKey = "";
+            pendingSince = 0;
             return;
         }
         long now = System.currentTimeMillis();
         String uuid = player.getUUID().toString();
+        // Require a stable crosshair target before creating a profile or replay.
+        // This prevents a quick mouse sweep across a crowded lobby from recording everyone.
+        if (!uuid.equals(activeKey)) {
+            if (!uuid.equals(pendingKey)) {
+                stopReplay("TARGET SWITCH");
+                pendingKey = uuid;
+                pendingSince = now;
+                return;
+            }
+            if (now - pendingSince < TARGET_CONFIRMATION_MS) return;
+            pendingKey = "";
+            pendingSince = 0;
+        } else {
+            pendingKey = "";
+            pendingSince = 0;
+        }
         boolean returningTarget = dossiers.containsKey(uuid);
         Dossier d = dossiers.computeIfAbsent(uuid, key -> {
             Dossier fresh = new Dossier(); fresh.uuid = key; fresh.name = player.getName().getString(); fresh.firstSeen = now; return fresh;
