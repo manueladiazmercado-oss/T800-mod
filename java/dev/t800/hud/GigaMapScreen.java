@@ -1,5 +1,6 @@
 package dev.t800.hud;
 
+import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.Button;
@@ -11,6 +12,13 @@ import net.minecraft.world.entity.monster.Enemy;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.levelgen.Heightmap;
+import java.io.InputStream;
+import java.io.OutputStream;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Properties;
 
 /**
  * Client-side surface map. Only reads chunks already loaded by the client;
@@ -28,14 +36,57 @@ public class GigaMapScreen extends Screen {
     private int cachedX = Integer.MIN_VALUE, cachedZ = Integer.MIN_VALUE, cachedYaw = Integer.MIN_VALUE, cachedZoom = -1;
     private boolean cachedTerrainLayer;
     private boolean cacheReady;
+    private final List<Bookmark> bookmarks = new ArrayList<>();
+    private record Bookmark(String name, int x, int y, int z) {}
+    private Path bookmarkFile() { return FabricLoader.getInstance().getConfigDir().resolve("t800hud-gigamap-bookmarks.properties"); }
+    private void loadBookmarks() {
+        bookmarks.clear();
+        Path file = bookmarkFile();
+        if (!Files.exists(file)) return;
+        try (InputStream in = Files.newInputStream(file)) {
+            Properties p = new Properties(); p.load(in);
+            for (int i = 0; i < 32; i++) {
+                String value = p.getProperty("mark." + i);
+                if (value == null) continue;
+                String[] parts = value.split(",", 4);
+                if (parts.length < 4) continue;
+                bookmarks.add(new Bookmark(parts[0], Integer.parseInt(parts[1]), Integer.parseInt(parts[2]), Integer.parseInt(parts[3])));
+            }
+        } catch (Exception ignored) { }
+    }
+    private void saveBookmarks() {
+        try {
+            Properties p = new Properties();
+            for (int i = 0; i < bookmarks.size() && i < 32; i++) {
+                Bookmark b = bookmarks.get(i);
+                p.setProperty("mark." + i, b.name().replace(",", "") + "," + b.x() + "," + b.y() + "," + b.z());
+            }
+            Files.createDirectories(bookmarkFile().getParent());
+            try (OutputStream out = Files.newOutputStream(bookmarkFile())) { p.store(out, "T-800 GigaMap bookmarks"); }
+        } catch (Exception ignored) { }
+    }
 
-    public GigaMapScreen() { super(Component.literal("T-800 // GIGAMAP")); }
+    public GigaMapScreen() {
+        super(Component.literal("T-800 // GIGAMAP"));
+        loadBookmarks();
+    }
 
     @Override
     protected void init() {
         addRenderableWidget(Button.builder(Component.literal("WORLD 3D"), b ->
                 Minecraft.getInstance().setScreen(new WorldRendererScreen()))
                 .bounds(Math.max(8, width - 94), 8, 86, 20).build());
+        addRenderableWidget(Button.builder(Component.literal("ADD BOOKMARK"), b -> {
+            Minecraft mc = Minecraft.getInstance();
+            if (mc.player != null && bookmarks.size() < 32) {
+                var p = mc.player.blockPosition();
+                bookmarks.add(new Bookmark("MARK " + (bookmarks.size() + 1), p.getX(), p.getY(), p.getZ()));
+                saveBookmarks();
+                b.setMessage(Component.literal("SAVED " + bookmarks.size() + "/32"));
+            } else {
+                b.setMessage(Component.literal("BOOKMARK LIMIT"));
+            }
+        }).bounds(Math.max(8, width - 202), 8, 102, 20).build());
         int y = height - 27;
         addRenderableWidget(Button.builder(Component.literal("ROTATE: " + (rotateWithPlayer ? "PLAYER" : "NORTH")), b -> {
             rotateWithPlayer = !rotateWithPlayer;
@@ -207,6 +258,23 @@ public class GigaMapScreen extends Screen {
                     mapX + gx * cellSize + dot, mapY + gz * cellSize + dot, color);
         }
 
+        // Persistent bookmarks are plotted only when inside the current map window.
+        for (Bookmark mark : bookmarks) {
+            double dx = mark.x() - px, dz = mark.z() - pz;
+            double rx = dx, rz = dz;
+            switch (Math.floorMod(yawStep, 4)) {
+                case 1 -> { rx = -dz; rz = dx; }
+                case 2 -> { rx = -dx; rz = -dz; }
+                case 3 -> { rx = dz; rz = -dx; }
+            }
+            int gx = CELLS / 2 + (int) Math.round(rx / scale);
+            int gz = CELLS / 2 + (int) Math.round(rz / scale);
+            if (gx < 0 || gx >= CELLS || gz < 0 || gz >= CELLS) continue;
+            int mx = mapX + gx * cellSize, my = mapY + gz * cellSize;
+            g.fill(mx - 2, my - 2, mx + Math.max(4, cellSize) + 2, my + Math.max(4, cellSize) + 2, 0xFFFFD54A);
+            HudRenderer.text(g, font, "M", mx + 1, my, 0.48f, 0xFF11151C);
+        }
+
         // Combat-linked priority markers use the same sorted threat list as the HUD.
         if (Config.gigaMapCombatLink) {
             int rank = 0;
@@ -237,7 +305,7 @@ public class GigaMapScreen extends Screen {
         HudRenderer.text(g, font, "N", mapX + mapSize - 7, mapY + 2, 0.5f, Config.text());
         HudRenderer.text(g, font, String.format("X %d  Y %d  Z %d   •   1 CELL = %d BLOCK(S)", px,
                 mc.player.blockPosition().getY(), pz, scale), 10, height - 39, 0.48f, Config.text());
-        HudRenderer.text(g, font, (Config.gigaMapCombatLink ? "PRIORITY NUMBERS = COMBAT AI RANK  •  " : "") + "RED HOSTILE  •  BLUE PLAYER  •  YELLOW OTHER  •  CAVES/STRUCTURE BOOKMARKS NOT INCLUDED",
+        HudRenderer.text(g, font, (Config.gigaMapCombatLink ? "PRIORITY NUMBERS = COMBAT AI RANK  •  " : "") + "RED HOSTILE  •  BLUE PLAYER  •  YELLOW OTHER  •  GOLD M = SAVED BOOKMARK",
                 10, height - 48, 0.40f, HudRenderer.AMBER);
     }
 }
