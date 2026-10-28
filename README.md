@@ -4,7 +4,7 @@ Client-side Terminator-style HUD and tactical analysis mod for Minecraft 1.21.11
 
 ## Features
 - Target lock, live target data, threat ranking and combat analytics
-- Persistent local Target Dossiers keyed by player UUID, unlimited profile count, sightings and observed combat statistics (P)
+- Persistent local Target Dossiers keyed by player UUID, unlimited profile count, sightings and observed combat statistics; target acquisition requires a stable 400 ms lock to avoid creating dossiers during quick lobby mouse sweeps (P)
 - Combat Replay records sampled local movement/rotation/health/distance telemetry to per-fight CSV files and provides a top-down playback reconstruction via OPEN REPLAY
 - Tactical movement-pattern estimates, combat memory and incoming-projectile forecast
 - GigaMap with block-scale zoom, sampled height relief, loaded-entity markers and persistent bookmarks
