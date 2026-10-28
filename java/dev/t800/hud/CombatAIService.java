@@ -30,7 +30,7 @@ public final class CombatAIService {
     private String diagnosis = "SELF-CHECK: WAITING";
     private int encounters, lastTargetId = Integer.MIN_VALUE;
     private static final class Sample {
-        float hp; double x,z; long seen; int ticks; String pattern="OBSERVING";
+        float hp; double x,z,lastDistance=Double.NaN; long seen; int ticks, rushTicks, strafeTicks, retreatTicks; String pattern="OBSERVING";
         Sample(LivingEntity e,long n){hp=e.getHealth();x=e.getX();z=e.getZ();seen=n;}
     }
     private static final class Memory { int seen,hits; String pattern="UNKNOWN"; }
@@ -53,13 +53,19 @@ public final class CombatAIService {
         LivingEntity likely=null; double nearest=Double.MAX_VALUE;
         for(LivingEntity e:list){
             double d=e.distanceTo(p); Sample s=samples.computeIfAbsent(e.getId(),id->new Sample(e,now));
-            double speed=Math.hypot(e.getX()-s.x,e.getZ()-s.z)*10;
+            double vx=(e.getX()-s.x)*10, vz=(e.getZ()-s.z)*10;
+            double speed=Math.hypot(vx,vz);
+            double closing=Double.isNaN(s.lastDistance) ? 0 : s.lastDistance-d;
+            double ex=e.getX()-p.getX(), ez=e.getZ()-p.getZ();
+            double lateral=Math.abs(vx*ez-vz*ex)/Math.max(1.0,d);
             if(e.getHealth()<s.hp-.01f)s.pattern="UNDER ATTACK";
-            else if(d<4.5&&speed>1.5)s.pattern="RUSHING";
+            else if(d<6.0&&closing>0.20&&speed>1.0){s.pattern="RUSHING";s.rushTicks++;}
+            else if(speed>0.8&&Math.abs(closing)<0.22&&lateral>0.7){s.pattern="STRAFING";s.strafeTicks++;}
+            else if(closing < -0.25 && speed>0.7){s.pattern="RETREATING";s.retreatTicks++;}
             else if(e instanceof Enemy&&d<14)s.pattern="ENGAGING";
             else if(speed>3.5)s.pattern="FAST MOVING";
             else if(e instanceof Player)s.pattern="PLAYER / UNKNOWN"; else s.pattern="PATROLLING";
-            s.hp=e.getHealth();s.x=e.getX();s.z=e.getZ();s.seen=now;s.ticks++;
+            s.hp=e.getHealth();s.x=e.getX();s.z=e.getZ();s.lastDistance=d;s.seen=now;s.ticks++;
             if(hurt&&d<nearest){nearest=d;likely=e;}
             threats.add(new Threat(e,score(e,d,speed,s.pattern),d,s.pattern,tactic(e,d,speed,s.pattern)));
         }
@@ -168,5 +174,19 @@ public final class CombatAIService {
     public int rememberedTypes(){return memory.size();}
     public int encounters(){return encounters;}
     public String memory(LivingEntity e){Memory m=e==null?null:memory.get(key(e));return m==null?"FIRST OBSERVATION":"SEEN "+m.seen+" / DAMAGE EVENTS "+m.hits;}
+    /** Heuristic opponent capability estimate, not a claim of real player skill or hidden server data. */
+    public int skillScore(LivingEntity e) {
+        if (e == null) return 0;
+        Sample s = samples.get(e.getId());
+        double gear = weapon(e.getMainHandItem()) * 22 + e.getArmorValue() * 1.2;
+        double health = 10.0 * Math.min(1.0, e.getHealth() / Math.max(1.0f, e.getMaxHealth()));
+        double adaptation = s == null ? 0 : Math.min(18, s.rushTicks * 0.7 + s.strafeTicks * 1.2 + s.retreatTicks * 0.6);
+        return (int) Mth.clamp(Math.round(gear + health + adaptation), 0, 100);
+    }
+    public String patternSummary(LivingEntity e) {
+        Sample s = e == null ? null : samples.get(e.getId());
+        if (s == null) return "NO PATTERN DATA";
+        return s.pattern + " | RUSH " + s.rushTicks + " | STRAFE " + s.strafeTicks + " | RETREAT " + s.retreatTicks;
+    }
     public int armorDurability(LivingEntity e){int total=0,left=0;for(EquipmentSlot slot:new EquipmentSlot[]{EquipmentSlot.HEAD,EquipmentSlot.CHEST,EquipmentSlot.LEGS,EquipmentSlot.FEET}){ItemStack a=e.getItemBySlot(slot);if(!a.isEmpty()&&a.getMaxDamage()>0){total+=a.getMaxDamage();left+=Math.max(0,a.getMaxDamage()-a.getDamageValue());}}return total==0?100:(int)Math.round(left*100.0/total);}
 }
